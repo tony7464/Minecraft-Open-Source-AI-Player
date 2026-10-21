@@ -1,3 +1,5 @@
 {
-  "entity.aiplayers.agent": "AI Agent"
+  "entity.aiplayers.agent": "AI Agent",
+  "key.aiplayers.push_to_talk": "Push to talk (AI agents)",
+  "key.category.aiplayers.aiplayers": "AI Players"
 }

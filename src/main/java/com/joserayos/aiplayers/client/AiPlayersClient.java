@@ -17,6 +17,7 @@ public final class AiPlayersClient {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         modBus.addListener(AiPlayersClient::registerRenderers);
         modBus.addListener(ClientNetwork::onRegister);
+        com.joserayos.aiplayers.client.voice.PushToTalk.register(modBus);
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {

@@ -141,6 +141,20 @@ See [`docs/TOOLS.md`](docs/TOOLS.md) for the full list and how to test them offl
 | `/ai locations` | Shared named locations (base, mine...) |
 | `/ai debug snapshot <name>` | Show the world snapshot the model sees |
 
+## Voice commands (push-to-talk)
+
+Hold **V** in game, speak, release. Speech-to-text runs on *your* computer's configured server (keys never go to the
+Minecraft server), and the transcript opens in the chat box so you can check it and press Enter.
+
+1. Run a local whisper server, for example [whisper.cpp](https://github.com/ggml-org/whisper.cpp):
+   `./build/bin/whisper-server -m models/ggml-base.en.bin --port 8080`
+   (or any OpenAI-compatible `/v1/audio/transcriptions` server, or a hosted one like Groq/OpenAI).
+2. Edit `config/aiplayers/voice.json` (created on first use): set `"enabled": true`, `"provider": "whisper_cpp"`
+   with `"base_url": "http://127.0.0.1:8080"` (or `"openai_compat"` with a `/v1` base URL and
+   `"api_key": "${env:YOUR_KEY_VAR}"`). Optional: `"default_agent": "Ava"` so "follow me" becomes "@Ava follow me";
+   `"confirm": false` sends without the chat-box check.
+3. The key can be rebound under Controls > AI Players. Text-to-speech replies are not implemented yet.
+
 ## Blueprints
 
 Built-in: `hut` (5x5 cobblestone hut, plank roof, wooden door) and `shelter` (emergency 3x3 box around the agent).
@@ -162,7 +176,7 @@ you exactly what's missing.
 - [x] **M8** Building
 - [x] **M9** Autonomous mode
 - [x] **M10** GUI
-- [ ] **M11** Voice
+- [x] **M11** Voice
 - [ ] **M12** Polish and release
 
 ## Continuous integration
