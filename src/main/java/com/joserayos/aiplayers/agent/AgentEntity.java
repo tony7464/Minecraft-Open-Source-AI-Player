@@ -79,6 +79,9 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
     private final Reflexes reflexes = new Reflexes(this);
     private @Nullable Vec3 guardPos;
     private int guardRadius = 10;
+    private int lastAgentHop;
+    private int lastAgentMsgTick = -100000;
+    private final java.util.ArrayDeque<Integer> sentAgentMessages = new java.util.ArrayDeque<>();
 
     public AgentEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -277,6 +280,34 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
         List<String> out = new ArrayList<>();
         counts.forEach((k, v) -> out.add(k + " x" + v));
         return out;
+    }
+
+    // ---- agent-to-agent messages ----
+
+    public static final int MAX_HOPS = 3;
+    public static final int MAX_MESSAGES_PER_MINUTE = 4;
+
+    /** Hop number the next outgoing message would carry (reply chains count up; fresh messages start at 1). */
+    public int nextOutgoingHop() {
+        return tickCount - lastAgentMsgTick < 600 ? lastAgentHop + 1 : 1;
+    }
+
+    /** Rate limit for outgoing agent messages. Returns false if over the limit; records the send otherwise. */
+    public boolean tryRecordAgentMessage() {
+        while (!sentAgentMessages.isEmpty() && tickCount - sentAgentMessages.peekFirst() > 1200) sentAgentMessages.removeFirst();
+        if (sentAgentMessages.size() >= MAX_MESSAGES_PER_MINUTE) return false;
+        sentAgentMessages.addLast(tickCount);
+        return true;
+    }
+
+    public void receiveAgentMessage(AgentEntity from, String text, int hop) {
+        lastAgentHop = hop;
+        lastAgentMsgTick = tickCount;
+        boolean mate = ownerId != null && ownerId.equals(from.getOwnerId());
+        String clean = AgentChat.sanitize(text, 400).replace("<", "(").replace(">", ")");
+        brain.submitFromPlayer("<agent_message from=\"" + from.getAgentName() + "\" teammate=\"" + mate + "\" hop=\"" + hop + "\">"
+                + clean + "</agent_message>", from.getAgentName());
+        addEvent("message from " + from.getAgentName());
     }
 
     public Reflexes getReflexes() { return reflexes; }

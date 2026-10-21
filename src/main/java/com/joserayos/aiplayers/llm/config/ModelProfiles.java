@@ -109,7 +109,7 @@ public final class ModelProfiles {
                 num(o, "temperature", 0.4),
                 (int) num(o, "max_output_tokens", 512),
                 (int) num(o, "timeout_seconds", 60),
-                (int) num(o, "requests_per_minute", 20),
+                (int) num(o, "requests_per_minute", "mock".equals(provider) ? 6000 : 20),
                 num(o, "daily_budget_usd", 0),
                 num(o, "price_per_million_input", 0),
                 num(o, "price_per_million_output", 0),

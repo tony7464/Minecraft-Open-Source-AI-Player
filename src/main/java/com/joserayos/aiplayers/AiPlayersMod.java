@@ -27,6 +27,13 @@ public final class AiPlayersMod {
         AiGameTests.register(modEventBus);
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent e) -> AiCommand.register(e.getDispatcher()));
         NeoForge.EVENT_BUS.addListener(ServerChatEvent.class, ChatRouter::onServerChat);
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStartedEvent e) ->
+                com.joserayos.aiplayers.team.TeamStore.load(e.getServer()));
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppingEvent e) -> {
+            com.joserayos.aiplayers.team.TeamStore.save(e.getServer());
+            com.joserayos.aiplayers.team.Blackboard.reset();
+            com.joserayos.aiplayers.team.AgentMemory.unloadAll();
+        });
         LOGGER.info("AI Players loaded");
     }
 }

@@ -13,6 +13,9 @@ import org.jspecify.annotations.Nullable;
 public class PickupItemsTask implements AgentTask {
     private final int radius;
     private @Nullable ItemEntity target;
+    private final java.util.Set<java.util.UUID> unreachable = new java.util.HashSet<>();
+    private double bestDistance = Double.MAX_VALUE;
+    private int noProgressTicks;
     private int picked;
     private int repath;
     private int idleTicks;
@@ -47,6 +50,8 @@ public class PickupItemsTask implements AgentTask {
         if (target == null || !target.isAlive()) {
             target = nearest(agent);
             repath = 0;
+            bestDistance = Double.MAX_VALUE;
+            noProgressTicks = 0;
             if (target == null) {
                 if (++idleTicks > 20) {
                     result = picked > 0 ? "picked up " + picked + " item(s); none left nearby" : "no items to pick up within " + radius + " blocks";
@@ -56,6 +61,16 @@ public class PickupItemsTask implements AgentTask {
             }
         }
         idleTicks = 0;
+        double d = agent.distanceTo(target);
+        if (d < bestDistance - 0.5) {
+            bestDistance = d;
+            noProgressTicks = 0;
+        } else if (++noProgressTicks > 60) {
+            // Can't reach this one (behind a wall, across a gap...): skip it and try the next.
+            unreachable.add(target.getUUID());
+            target = null;
+            return TaskStatus.RUNNING;
+        }
         if (--repath <= 0) {
             repath = 10;
             agent.getNavigation().moveTo(target, 1.0);
@@ -65,7 +80,7 @@ public class PickupItemsTask implements AgentTask {
 
     private @Nullable ItemEntity nearest(AgentEntity agent) {
         List<ItemEntity> items = agent.level().getEntitiesOfClass(ItemEntity.class, agent.getBoundingBox().inflate(radius),
-                e -> e.isAlive() && !e.getItem().isEmpty() && agent.canHold(e.getItem()));
+                e -> e.isAlive() && !e.getItem().isEmpty() && !unreachable.contains(e.getUUID()) && agent.canHold(e.getItem()));
         return items.stream().min(Comparator.comparingDouble(agent::distanceToSqr)).orElse(null);
     }
 

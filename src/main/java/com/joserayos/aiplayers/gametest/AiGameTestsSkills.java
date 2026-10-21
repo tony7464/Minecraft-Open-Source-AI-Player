@@ -29,6 +29,7 @@ final class AiGameTestsSkills {
         M4Tests.registerAll(r);
         M5Tests.registerAll(r);
         M6Tests.registerAll(r);
+        M7Tests.registerAll(r);
     }
 
     static void say(AgentEntity agent, ServerPlayer from, String text) {

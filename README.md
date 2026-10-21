@@ -129,13 +129,15 @@ See [`docs/TOOLS.md`](docs/TOOLS.md) for the full list and how to test them offl
 | `/ai despawn <name>` | Remove an agent |
 | `/ai list` | List agents |
 | `/ai tell <name> <message>` | Same as `@name` |
-| `/ai mode <name> <follow\|idle\|stay>` | Change mode |
+| `/ai mode <name> <follow\|stay\|idle\|guard>` | Change mode |
 | `/ai model <name> <profile>` | Hot-swap the model profile |
 | `/ai profiles` | List model profiles from models.json |
 | `/ai stop <name\|all>` | Kill switch: cancel tasks and pending model calls |
 | `/ai status <name>` | Health, task, profile |
 | `/ai test-profile <profile>` | Connectivity and tool-calling test |
 | `/ai budget` · `/ai reload` | Costs today · reload config files |
+| `/ai memory <name> [clear]` | Show (or wipe) an agent's long-term memory |
+| `/ai locations` | Shared named locations (base, mine...) |
 | `/ai debug snapshot <name>` | Show the world snapshot the model sees |
 
 ## Roadmap
@@ -147,7 +149,7 @@ See [`docs/TOOLS.md`](docs/TOOLS.md) for the full list and how to test them offl
 - [x] **M4** Mining, gathering and inventory
 - [x] **M5** Crafting and smelting
 - [x] **M6** Survival and combat
-- [ ] **M7** Multi-agent and memory
+- [x] **M7** Multi-agent and memory
 - [ ] **M8** Building
 - [ ] **M9** Autonomous mode
 - [ ] **M10** GUI

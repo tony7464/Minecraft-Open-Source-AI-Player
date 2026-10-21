@@ -29,6 +29,9 @@ final class AiCommandExtensions {
 
     static void extend(LiteralArgumentBuilder<CommandSourceStack> root) {
         root.then(Commands.literal("model").then(AiCommand.agentArg().then(AiCommand.profileArgument().executes(AiCommandExtensions::model))));
+        root.then(Commands.literal("memory").then(AiCommand.agentArg().executes(AiCommandExtensions::memory)
+                .then(Commands.literal("clear").executes(AiCommandExtensions::memoryClear))));
+        root.then(Commands.literal("locations").executes(AiCommandExtensions::locations));
         root.then(Commands.literal("profiles").executes(AiCommandExtensions::profiles));
         root.then(Commands.literal("reload").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(AiCommandExtensions::reload));
         root.then(Commands.literal("budget").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(AiCommandExtensions::budget));
@@ -56,6 +59,37 @@ final class AiCommandExtensions {
         a.setProfileId(AiServices.router().profiles().get(profile).get().id());
         AiCommand.ok(ctx, a.getAgentName() + " now uses profile '" + a.getProfileId() + "'.");
         return 1;
+    }
+
+    private static int memory(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        AgentEntity a = AiCommand.agent(ctx);
+        var mem = com.joserayos.aiplayers.team.AgentMemory.of(ctx.getSource().getServer(), a.getUUID());
+        var notes = mem.notes();
+        if (notes.isEmpty() && mem.summary().isEmpty()) {
+            AiCommand.ok(ctx, a.getAgentName() + " has no memories yet.");
+            return 0;
+        }
+        for (var e : notes.entrySet()) AiCommand.ok(ctx, "- " + e.getKey() + ": " + e.getValue());
+        for (String line : mem.summary()) ctx.getSource().sendSystemMessage(Component.literal("  earlier: " + line).withStyle(ChatFormatting.GRAY));
+        return notes.size();
+    }
+
+    private static int memoryClear(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        AgentEntity a = AiCommand.agent(ctx);
+        com.joserayos.aiplayers.team.AgentMemory.of(ctx.getSource().getServer(), a.getUUID()).clear();
+        a.getAgentBrain().clearHistory();
+        AiCommand.ok(ctx, "Cleared " + a.getAgentName() + "'s memory.");
+        return 1;
+    }
+
+    private static int locations(CommandContext<CommandSourceStack> ctx) {
+        var locs = com.joserayos.aiplayers.team.Blackboard.locations();
+        if (locs.isEmpty()) AiCommand.ok(ctx, "No shared locations yet.");
+        for (var e : locs.entrySet()) {
+            var p = e.getValue().pos();
+            AiCommand.ok(ctx, "- " + e.getKey() + ": " + p.getX() + " " + p.getY() + " " + p.getZ() + " (" + e.getValue().dimension().identifier() + ")");
+        }
+        return locs.size();
     }
 
     private static int profiles(CommandContext<CommandSourceStack> ctx) {

@@ -31,6 +31,9 @@ Models without native tool calling can use `"tool_mode": "json_prompt"` in `mode
 | `stop_attacking` | | Stop fighting, leave GUARD mode | M6 |
 | `equip_best_armor` | | Wear best armor, hold best weapon | M6 |
 | `eat` | | Eat the best safe food to heal | M6 |
+| `remember` / `recall` / `forget` | `key`, `text` / `query` / `key` | Long-term notes, saved in `<world>/aiplayers/memory/` | M7 |
+| `set_location` / `go_to_location` | `name`, optional `x y z` / `name` | Named locations shared by all agents, saved in `<world>/aiplayers/team.json` | M7 |
+| `message_agent` | `agent`, `message` | Message another agent (max 3 reply hops, 4 per minute) | M7 |
 | `smelt` | `item` (input or output), `count?` | Smelt in a nearby furnace (places one from inventory), picks fuel automatically | M5 |
 
 The perception snapshot also lists `[RESOURCES]` (logs, ores, stone, water, lava within 24 m) and

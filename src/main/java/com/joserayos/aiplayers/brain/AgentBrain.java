@@ -148,7 +148,8 @@ public final class AgentBrain {
         boolean jsonMode = profile.toolMode() == ModelProfile.ToolMode.JSON_PROMPT;
         List<ToolSpec> tools = ToolRegistry.specsFor(agent.getMode());
         AgentSnapshot snapshot = SnapshotBuilder.capture(agent);
-        String system = PromptBuilder.systemPrompt(snapshot, agent.getPersona(), true) + (jsonMode ? JsonActionParser.instructions(tools) : "");
+        String system = PromptBuilder.systemPrompt(snapshot, agent.getPersona(), true)
+                + com.joserayos.aiplayers.team.TeamPrompt.extra(agent) + (jsonMode ? JsonActionParser.instructions(tools) : "");
         List<ChatMessage> messages = new ArrayList<>();
         messages.add(ChatMessage.system(system));
         messages.addAll(history);
@@ -265,8 +266,17 @@ public final class AgentBrain {
 
     private void remember(ChatMessage m) {
         history.addLast(m);
-        while (history.size() > HISTORY_LIMIT) history.removeFirst();
+        while (history.size() > HISTORY_LIMIT) summarizeDropped(history.removeFirst());
         // Never start the history with a dangling tool result or assistant turn.
-        while (!history.isEmpty() && history.peekFirst().role() != ChatMessage.Role.USER) history.removeFirst();
+        while (!history.isEmpty() && history.peekFirst().role() != ChatMessage.Role.USER) summarizeDropped(history.removeFirst());
+    }
+
+    /** Cheap, model-free summary: keep the gist of requests that fall out of the context window. */
+    private void summarizeDropped(ChatMessage m) {
+        var server = agent.level().getServer();
+        if (server == null || m.role() != ChatMessage.Role.USER || m.content().startsWith("[task_result]")) return;
+        String text = m.content().replaceAll("<chat from=\"([^\"]*)\">", "$1: ").replaceAll("<agent_message from=\"([^\"]*)\"[^>]*>", "$1 (agent): ")
+                .replaceAll("</?[a-z_]+>", "").strip();
+        if (!text.isEmpty()) com.joserayos.aiplayers.team.AgentMemory.of(server, agent.getUUID()).addSummary(text);
     }
 }
