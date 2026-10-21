@@ -57,6 +57,36 @@ public final class Autonomy {
 
     public Goal suggestion() { return Curriculum.next(inventorySummary()); }
 
+    /** Runs the suggested goal's tool directly (no model). Returns a description for logs/status. */
+    public String runSuggestedFallback() {
+        Goal g = suggestion();
+        String[] call = Curriculum.fallbackCall(g);
+        if (call == null) return "no automatic action for goal '" + g.text() + "'";
+        if (goal.isNone()) goal = g;
+        var result = com.joserayos.aiplayers.brain.tools.ToolRegistry.execute(agent, call[0],
+                new com.joserayos.aiplayers.brain.tools.ToolArgs(com.google.gson.JsonParser.parseString(call[1]).getAsJsonObject()),
+                new com.joserayos.aiplayers.brain.tools.ToolContext(""));
+        String msg = "fallback " + call[0] + " " + call[1] + " -> " + result.message();
+        agent.addEvent(msg);
+        com.joserayos.aiplayers.AiPlayersMod.LOGGER.info("{} (autonomous) {}", agent.getAgentName(), msg);
+        return msg;
+    }
+
+    /** Why the heartbeat isn't firing right now ("" = idle, a heartbeat is due). */
+    public String idleBlocker() {
+        if (agent.getMode() != AgentMode.AUTONOMOUS) return "not in autonomous mode";
+        if (agent.hasActiveTask()) return "running a task";
+        if (agent.getAgentBrain().isBusy()) return "waiting for the model (" + agent.getAgentBrain().thinkingSeconds() + "s)";
+        if (agent.getAgentBrain().hasPending()) return "model input queued (cooldown between thinks)";
+        if (agent.getTarget() != null) return "fighting " + agent.getTarget().getName().getString();
+        if (agent.isFleeing()) return "fleeing";
+        long now = agent.level().getGameTime();
+        while (!heartbeats.isEmpty() && now - heartbeats.peekFirst() > 72_000) heartbeats.removeFirst();
+        if (heartbeats.size() >= AiPlayersConfig.get(AiPlayersConfig.AUTONOMOUS_MAX_THINKS_PER_HOUR)) return "hourly heartbeat cap reached";
+        int every = AiPlayersConfig.get(AiPlayersConfig.AUTONOMOUS_HEARTBEAT_SECONDS) * 20;
+        return "idle; next heartbeat in " + Math.max(0, (every - idleTicks) / 20) + "s";
+    }
+
     /** Prompt section for AUTONOMOUS mode. */
     public String promptText() {
         if (agent.getMode() != AgentMode.AUTONOMOUS) return "";

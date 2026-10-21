@@ -44,7 +44,7 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
         HttpRequest.Builder http = HttpRequest.newBuilder(URI.create(baseUrl + "/chat/completions"))
                 .timeout(request.timeout())
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(buildBody(request).toString()));
+                .POST(HttpRequest.BodyPublishers.ofString(buildBody(request, HttpSupport.isLocal(baseUrl)).toString()));
         if (!apiKey.isBlank()) http.header("Authorization", "Bearer " + apiKey);
         return HttpSupport.CLIENT.sendAsync(http.build(), HttpResponse.BodyHandlers.ofString())
                 .thenApply(HttpSupport::requireSuccess)
@@ -53,13 +53,36 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
 
     /** Converts the internal request into an OpenAI-style JSON body. */
     public static JsonObject buildBody(LlmRequest request) {
+        return buildBody(request, false);
+    }
+
+    /** True for Qwen3-family models, which "think" at length unless told not to. */
+    public static boolean isQwen3(String model) {
+        return model.toLowerCase(java.util.Locale.ROOT).contains("qwen3");
+    }
+
+    /**
+     * @param local the server is on this machine (Ollama, LM Studio, llama.cpp); only then are
+     *              non-standard "turn thinking off" fields sent, since hosted APIs may reject them.
+     */
+    public static JsonObject buildBody(LlmRequest request, boolean local) {
         JsonObject body = new JsonObject();
+        boolean noThink = isQwen3(request.model());
+        if (noThink && local) {
+            body.addProperty("think", false);            // Ollama
+            body.addProperty("reasoning_effort", "none"); // Ollama OpenAI-compat / LM Studio
+        }
         body.addProperty("model", request.model());
         body.addProperty("temperature", request.temperature());
         if (request.maxOutputTokens() > 0) body.addProperty("max_tokens", request.maxOutputTokens());
         body.addProperty("stream", false);
         JsonArray messages = new JsonArray();
-        for (ChatMessage m : request.messages()) messages.add(toJson(m));
+        for (ChatMessage m : request.messages()) {
+            JsonObject j = toJson(m);
+            // Qwen3 soft switch: "/no_think" in the system prompt disables the long <think> phase.
+            if (noThink && m.role() == ChatMessage.Role.SYSTEM) j.addProperty("content", m.content() + "\n/no_think");
+            messages.add(j);
+        }
         body.add("messages", messages);
         if (!request.tools().isEmpty()) {
             JsonArray tools = new JsonArray();
@@ -155,7 +178,10 @@ public final class OpenAiCompatibleProvider implements LlmProvider {
 
     /** Reasoning models (qwen3, deepseek-r1) may wrap their reasoning in think tags; drop it from chat. */
     public static String stripThinking(String text) {
-        return text.replaceAll("(?s)<think>.*?</think>", "").trim();
+        String t = text.replaceAll("(?s)<think>.*?</think>", "");
+        t = t.replaceAll("(?s)<think>.*", "");      // unterminated (output cut off mid-thought)
+        t = t.replaceAll("(?s)^.*?</think>", "");   // template already opened the tag; only the close is present
+        return t.trim();
     }
 
     private static int intOr(JsonObject o, String key) {

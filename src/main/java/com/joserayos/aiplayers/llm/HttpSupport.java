@@ -37,4 +37,10 @@ public final class HttpSupport {
         if (key.length() <= 8) return "****";
         return key.substring(0, 3) + "..." + key.substring(key.length() - 3);
     }
+
+    /** Base URL points at this machine. */
+    public static boolean isLocal(String baseUrl) {
+        String u = baseUrl.toLowerCase(java.util.Locale.ROOT);
+        return u.contains("://127.0.0.1") || u.contains("://localhost") || u.contains("://[::1]") || u.contains("://0.0.0.0");
+    }
 }

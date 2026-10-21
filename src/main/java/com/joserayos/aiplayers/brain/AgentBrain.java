@@ -113,8 +113,31 @@ public final class AgentBrain {
 
     // ---- loop ----
 
+    private long thinkStartedMs;
+    private String lastOutcome = "";
+    private int noToolStreak;
+
+    /** Seconds the current model call has been running, or 0. */
+    public long thinkingSeconds() { return inFlight == null ? 0 : (System.currentTimeMillis() - thinkStartedMs) / 1000; }
+
+    /** What happened on the last model call (for /ai status). */
+    public String lastOutcome() { return lastOutcome; }
+
     public void serverTick() {
-        if (inFlight != null || pending.isEmpty()) return;
+        if (inFlight != null) {
+            // Watchdog: never stay "thinking" forever, whatever the HTTP layer does.
+            long limitMs = (AiPlayersConfig.get(AiPlayersConfig.MAX_THINK_SECONDS) + 5) * 1000L;
+            if (System.currentTimeMillis() - thinkStartedMs > limitMs) {
+                inFlight.cancel(true);
+                inFlight = null;
+                generation++;
+                agent.setThinking(false);
+                lastOutcome = "gave up: no answer after " + (limitMs / 1000) + "s";
+                reportError(new LlmException("model did not answer within " + (limitMs / 1000) + "s", 0));
+            }
+            return;
+        }
+        if (pending.isEmpty()) return;
         if (agent.level().getGameTime() < nextThinkAtTick) return;
         startThink();
     }
@@ -166,7 +189,7 @@ public final class AgentBrain {
         if (newInput != null) messages.add(ChatMessage.user(newInput));
         if (messages.size() == 1) return; // nothing to say
 
-        int timeout = profile.timeoutSeconds() * LlmRouter.MAX_ATTEMPTS + 10;
+        int timeout = Math.min(profile.timeoutSeconds() * LlmRouter.MAX_ATTEMPTS + 10, AiPlayersConfig.get(AiPlayersConfig.MAX_THINK_SECONDS));
         noticeHostedProvider(profile);
         int gen = ++generation;
         agent.setThinking(true);
@@ -182,6 +205,7 @@ public final class AgentBrain {
                 .thenApply(LlmRouter.Result::response)
                 .orTimeout(timeout, TimeUnit.SECONDS);
         inFlight = future;
+        thinkStartedMs = System.currentTimeMillis();
         future.whenComplete((response, error) -> server.execute(() -> onResult(gen, newInput, jsonMode, response, error)));
     }
 
@@ -191,9 +215,20 @@ public final class AgentBrain {
         agent.setThinking(false);
         nextThinkAtTick = agent.level().getGameTime() + AiPlayersConfig.get(AiPlayersConfig.MIN_SECONDS_BETWEEN_THINKS) * 20L;
         if (error != null || response == null) {
-            reportError(LlmException.from(error));
+            LlmException e = LlmException.from(error);
+            lastOutcome = "error: " + e.friendlyMessage();
+            reportError(e);
             return;
         }
+        try {
+            handleResponse(input, jsonMode, response);
+        } catch (RuntimeException e) {
+            lastOutcome = "internal error handling the reply: " + e;
+            AiPlayersMod.LOGGER.error("Agent {} failed to handle a model reply", agent.getAgentName(), e);
+        }
+    }
+
+    private void handleResponse(@Nullable String input, boolean jsonMode, LlmResponse response) {
         lastExchange = describe(List.of(), response) + "\n" + lastExchange;
 
         String text = response.text();
@@ -239,6 +274,22 @@ public final class AgentBrain {
         if (!jsonResults.isEmpty()) remember(ChatMessage.user("[tool_results] " + String.join(" | ", jsonResults)));
         if (followUp) submitAutomatic(null);
         if (say.isBlank() && calls.isEmpty()) lastReply = "...";
+        long secs = (System.currentTimeMillis() - thinkStartedMs) / 1000;
+        lastOutcome = (calls.isEmpty() ? "reply with no tool call" : "reply with " + calls.size() + " tool call(s)")
+                + (say.isBlank() ? " and no text" : "") + " after " + secs + "s";
+        if (!calls.isEmpty()) {
+            noToolStreak = 0;
+        } else if (agent.getMode() == com.joserayos.aiplayers.agent.AgentMode.AUTONOMOUS && agent.getExecutor().isIdle()) {
+            // Small local models often just talk. Nudge once, then act on the curriculum directly.
+            if (++noToolStreak == 1) {
+                submitHeartbeat("[nudge] You replied without calling a tool, so nothing happened. You are in AUTONOMOUS mode: "
+                        + "call a tool now (suggested: " + agent.getAutonomy().suggestion().text() + ").");
+            } else {
+                noToolStreak = 0;
+                String ran = agent.getAutonomy().runSuggestedFallback();
+                lastOutcome += "; " + ran;
+            }
+        }
     }
 
     private String ownerName() {

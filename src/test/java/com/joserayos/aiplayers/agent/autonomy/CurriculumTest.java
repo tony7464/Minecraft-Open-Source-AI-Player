@@ -39,4 +39,12 @@ class CurriculumTest {
         assertTrue(Goal.parse("").isNone());
         assertFalse(new Goal("explore", "", 0).verifiable());
     }
+
+    @Test
+    void everyEarlyGoalHasAFallbackAction() {
+        assertEquals("collect_block", Curriculum.fallbackCall(Curriculum.next(inv()))[0]);
+        assertEquals("craft_item", Curriculum.fallbackCall(Curriculum.next(inv("#logs", 4)))[0]);
+        assertEquals("craft_item", Curriculum.fallbackCall(Curriculum.next(inv("wooden_pickaxe", 1, "cobblestone", 3)))[0]);
+        assertEquals(null, Curriculum.fallbackCall(Curriculum.next(inv("stone_pickaxe", 1, "stone_sword", 1))));
+    }
 }

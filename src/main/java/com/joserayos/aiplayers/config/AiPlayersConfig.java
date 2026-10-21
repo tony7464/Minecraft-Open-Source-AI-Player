@@ -67,6 +67,9 @@ public final class AiPlayersConfig {
             .comment("Maximum tool calls accepted from one model response.")
             .defineInRange("maxToolCallsPerThink", 4, 1, 16);
 
+    public static final ModConfigSpec.IntValue MAX_THINK_SECONDS = BUILDER
+            .comment("Hard cap on one model call including retries; the agent gives up and recovers after this.")
+            .defineInRange("maxThinkSeconds", 90, 10, 900);
     public static final ModConfigSpec.IntValue MAX_CHAINED_THINKS = BUILDER
             .comment("Maximum automatic follow-up model calls (after tool or task results) per message from a player.")
             .defineInRange("maxChainedThinks", 4, 0, 20);

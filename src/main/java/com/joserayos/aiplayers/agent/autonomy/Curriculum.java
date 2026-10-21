@@ -17,6 +17,23 @@ public final class Curriculum {
         return false;
     }
 
+    /** A direct tool call that works toward a curriculum goal without the model (tool name + JSON args), or null. */
+    public static String[] fallbackCall(Goal g) {
+        String item = g.item();
+        int n = Math.max(1, g.count());
+        return switch (item) {
+            case "#logs" -> new String[]{"collect_block", "{\"block\":\"log\",\"count\":" + n + "}"};
+            case "#planks" -> new String[]{"collect_block", "{\"block\":\"log\",\"count\":" + ((n + 3) / 4) + "}"};
+            case "cobblestone" -> new String[]{"collect_block", "{\"block\":\"stone\",\"count\":" + Math.min(n, 64) + "}"};
+            case "raw_iron" -> new String[]{"collect_block", "{\"block\":\"iron_ore\",\"count\":" + n + "}"};
+            case "iron_ingot" -> new String[]{"smelt", "{\"item\":\"iron_ingot\",\"count\":" + n + "}"};
+            case "#doors" -> new String[]{"craft_item", "{\"item\":\"oak_door\"}"};
+            case "@shelter" -> new String[]{"build_blueprint", "{\"name\":\"hut\"}"};
+            case "crafting_table", "wooden_pickaxe", "stone_pickaxe", "stone_sword" -> new String[]{"craft_item", "{\"item\":\"" + item + "\"}"};
+            default -> null; // food and free-choice goals need judgment
+        };
+    }
+
     public static Goal next(Map<String, Integer> inv) {
         boolean stonePick = hasAny(inv, "stone_pickaxe", "iron_pickaxe", "diamond_pickaxe", "netherite_pickaxe");
         boolean anyPick = stonePick || hasAny(inv, "wooden_pickaxe");

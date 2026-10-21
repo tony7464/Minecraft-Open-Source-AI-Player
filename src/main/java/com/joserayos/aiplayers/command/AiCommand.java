@@ -133,8 +133,12 @@ public final class AiCommand {
         ok(ctx, a.getAgentName() + ": health " + Math.round(a.getHealth()) + "/" + Math.round(a.getMaxHealth())
                 + ", pos " + a.getBlockX() + " " + a.getBlockY() + " " + a.getBlockZ()
                 + ", mode " + a.getMode().id() + ", profile " + a.getProfileId()
-                + ", " + a.taskSummary() + (a.isThinking() ? ", thinking" : ""));
+                + ", " + a.taskSummary() + (a.isThinking() ? ", thinking for " + a.getAgentBrain().thinkingSeconds() + "s" : ""));
         if (!a.getAgentBrain().lastReply().isEmpty()) ok(ctx, "Last reply: " + a.getAgentBrain().lastReply());
+        if (!a.getAgentBrain().lastOutcome().isEmpty()) ok(ctx, "Last model call: " + a.getAgentBrain().lastOutcome());
+        if (a.getMode() == AgentMode.AUTONOMOUS) {
+            ok(ctx, "Autonomy: " + a.getAutonomy().idleBlocker() + " | goal: " + a.getAutonomy().goal().describe(a.getAutonomy().inventorySummary()));
+        }
         return 1;
     }
 

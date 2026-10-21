@@ -69,12 +69,18 @@ final class AiGameTestsSkills {
         ServerPlayer owner = AiGameTests.owner(helper, 2, 1, 2);
         AgentEntity agent = AiGameTests.agent(helper, owner, "Picker", 4, 1, 4);
         agent.setMode(AgentMode.STAY);
-        BlockPos drop = helper.absolutePos(new BlockPos(8, 1, 7));
-        helper.getLevel().addFreshEntity(new ItemEntity(helper.getLevel(), drop.getX() + 0.5, drop.getY() + 0.2, drop.getZ() + 0.5,
-                new ItemStack(Items.COBBLESTONE, 4)));
-        say(agent, owner, "!pickup_items {\"radius\":8}");
+        BlockPos drop = helper.absolutePos(new BlockPos(7, 1, 6));
+        ItemEntity item = new ItemEntity(helper.getLevel(), drop.getX() + 0.5, drop.getY() + 0.2, drop.getZ() + 0.5,
+                new ItemStack(Items.COBBLESTONE, 4));
+        // Spawn after the batch has finished setting up neighbouring test areas.
+        helper.runAfterDelay(5, () -> {
+            helper.getLevel().addFreshEntity(item);
+        });
+        // Let the item land first; a falling item is treated as unreachable.
+        helper.runAfterDelay(30, () -> say(agent, owner, "!pickup_items {\"radius\":8}"));
         helper.succeedWhen(() -> helper.assertTrue(agent.countItem(Items.COBBLESTONE) == 4,
-                "has " + agent.countItem(Items.COBBLESTONE) + " cobblestone; " + agent.lastResult()));
+                "has " + agent.countItem(Items.COBBLESTONE) + " cobblestone; item " + (item.isRemoved() ? "removed: " + item.getRemovalReason() : "alive at " + item.blockPosition())
+                        + "; " + agent.lastResult()));
     }
 
     private static void unknownTool(GameTestHelper helper) {
