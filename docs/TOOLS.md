@@ -24,6 +24,9 @@ Models without native tool calling can use `"tool_mode": "json_prompt"` in `mode
 | `deposit` | `x`,`y`,`z`, `item?`, `count?` | Put items in a chest (all if no item given) | M4 |
 | `withdraw` | `x`,`y`,`z`, `item`, `count` | Take items from a chest | M4 |
 | `inventory_summary` | | List held item and inventory | M4 |
+| `craft_item` | `item`, `count?` | Craft from inventory; auto-crafts planks/sticks etc. and places a crafting table when needed | M5 |
+| `list_craftable` | | Items craftable right now | M5 |
+| `smelt` | `item` (input or output), `count?` | Smelt in a nearby furnace (places one from inventory), picks fuel automatically | M5 |
 
 The perception snapshot also lists `[RESOURCES]` (logs, ores, stone, water, lava within 24 m) and
 `[STRUCTURES]` (crafting tables, furnaces, chests, beds) from an incremental, lag-free block scan.

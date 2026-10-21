@@ -27,6 +27,7 @@ final class AiGameTestsSkills {
         r.add("tool_pickup_items", "platform", 400, AiGameTestsSkills::toolPickupItems);
         r.add("tool_unknown_is_reported", "platform", 200, AiGameTestsSkills::unknownTool);
         M4Tests.registerAll(r);
+        M5Tests.registerAll(r);
     }
 
     static void say(AgentEntity agent, ServerPlayer from, String text) {

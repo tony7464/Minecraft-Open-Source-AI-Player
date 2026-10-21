@@ -6,5 +6,6 @@ final class ExtraTools {
 
     static void registerAll() {
         GatherTools.register();
+        CraftTools.register();
     }
 }
