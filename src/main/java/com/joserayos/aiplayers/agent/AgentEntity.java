@@ -76,6 +76,9 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
     private boolean pickupAllowed;
     private int pickedUpCount;
     private final BlockInterestCache blockCache = new BlockInterestCache();
+    private com.joserayos.aiplayers.perception.@org.jspecify.annotations.Nullable ResourceMap resourceMap;
+    private int mapCycleSeen;
+    private @org.jspecify.annotations.Nullable BlockPos home;
     private final Reflexes reflexes = new Reflexes(this);
     private final com.joserayos.aiplayers.agent.autonomy.Autonomy autonomy = new com.joserayos.aiplayers.agent.autonomy.Autonomy(this);
     private @Nullable Vec3 guardPos;
@@ -347,6 +350,42 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
 
     public BlockInterestCache getBlockCache() { return blockCache; }
 
+    /** Remembered resources/landmarks for this agent (persisted per world). */
+    public com.joserayos.aiplayers.perception.ResourceMap getResourceMap() {
+        if (resourceMap == null) {
+            var server = level().getServer();
+            java.nio.file.Path file = server == null ? null : server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
+                    .resolve("aiplayers").resolve("maps").resolve(getUUID() + ".json");
+            resourceMap = new com.joserayos.aiplayers.perception.ResourceMap(file);
+        }
+        return resourceMap;
+    }
+
+    public String dimensionId() { return level().dimension().identifier().toString(); }
+
+    /** Home point used for the exploration radius (where the agent was first spawned, or set later). */
+    public BlockPos getHome() {
+        if (home == null) home = blockPosition().immutable();
+        return home;
+    }
+
+    public void setHome(BlockPos pos) { this.home = pos.immutable(); }
+
+    private void updateResourceMap(ServerLevel sl) {
+        if (blockCache.cycles() != mapCycleSeen) {
+            mapCycleSeen = blockCache.cycles();
+            var map = getResourceMap();
+            String dim = dimensionId();
+            long now = sl.getGameTime();
+            for (BlockInterestCache.Entry e : blockCache.latest()) {
+                if (e.type().equals("lava")) continue;
+                map.record(e.type(), dim, e.nearest().getX(), e.nearest().getY(), e.nearest().getZ(), e.count(), now);
+            }
+            map.markVisited(dim, getBlockX(), getBlockZ());
+        }
+        if (tickCount % 600 == 0) getResourceMap().save();
+    }
+
     public void setPickupAllowed(boolean allowed) { this.pickupAllowed = allowed; }
 
     public int drainPickedUpCount() {
@@ -428,6 +467,8 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
             // Tasks pause while fighting; combat goals own the navigation.
             if (target == null && !reflexes.isFleeing()) executor.tick();
             blockCache.tick(sl, blockPosition());
+            getHome();
+            updateResourceMap(sl);
             autonomy.tick();
             if (pickupAllowed) collectNearbyItems(sl);
             brain.serverTick();
@@ -459,6 +500,7 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
     @Override
     public void remove(RemovalReason reason) {
         brain.cancel("removed");
+        if (resourceMap != null) resourceMap.save();
         super.remove(reason);
     }
 
@@ -473,6 +515,7 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
         output.putString("Persona", persona);
         output.putString("Mode", mode.id());
         output.putString("Goal", autonomy.goal().serialize());
+        if (home != null) output.putLong("Home", home.asLong());
         writeInventoryToTag(output);
     }
 
@@ -484,6 +527,7 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
         this.profileId = input.getStringOr("Profile", "");
         this.persona = input.getStringOr("Persona", "");
         this.mode = AgentMode.parse(input.getStringOr("Mode", "follow")).orElse(AgentMode.FOLLOW);
+        input.getLong("Home").ifPresent(h -> this.home = BlockPos.of(h));
         autonomy.setGoal(com.joserayos.aiplayers.agent.autonomy.Goal.parse(input.getStringOr("Goal", "")));
         readInventoryFromTag(input);
         refreshNameTag();

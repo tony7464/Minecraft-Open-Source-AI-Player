@@ -117,7 +117,8 @@ Usage is logged to `logs/aiplayers-usage.csv`; `/ai budget` shows today's totals
 
 ## Tools
 
-Agents act through validated Java tools such as `follow_player`, `go_to`, `give_item` and `pickup_items`.
+Agents act through validated Java tools such as `follow_player`, `go_to`, `explore`, `go_to_known`, `collect_block`, `give_item` and `pickup_items`.
+Agents can roam the whole world: `explore` walks far (by direction or toward unvisited land), `collect_block` searches farther on its own, and each agent remembers where it saw resources.
 See [`docs/TOOLS.md`](docs/TOOLS.md) for the full list and how to test them offline with the `mock` profile.
 
 ## Commands

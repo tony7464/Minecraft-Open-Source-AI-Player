@@ -11,7 +11,9 @@ Models without native tool calling can use `"tool_mode": "json_prompt"` in `mode
 |---|---|---|---|
 | `say` | `text` | Say something in chat | M3 |
 | `follow_player` | `player?` (default: speaker) | Follow a player; FOLLOW mode | M3 |
-| `go_to` | `x`, `y`, `z` | Walk to coordinates (waypoints for long trips, max 512 blocks) | M3 |
+| `go_to` | `x`, `y`, `z` | Walk to coordinates (waypoints for long trips; no distance limit unless `maxGoToDistance` is set) | M3 |
+| `explore` | `direction?` (north…northwest or `auto`), `distance?` (default 128), `looking_for?` | Travel far to discover land and resources; goes around water/cliffs/walls, keeps its chunks loaded, stops early when `looking_for` is seen, and reports what it saw | M13 |
+| `go_to_known` | `block` | Walk back to the nearest remembered spot where that block was seen | M13 |
 | `go_to_player` | `player?` | Walk to a player | M3 |
 | `stay` | | Stop and wait here (STAY mode) | M3 |
 | `stop` | | Cancel the current and queued tasks | M3 |
@@ -72,3 +74,12 @@ regenerate when not hurt for 5 s. Damage shows up in `[RECENT EVENTS]`; tasks pa
 goal and a suggested next goal from a built-in curriculum (wood, crafting table, wooden pickaxe, stone pickaxe, sword,
 food, hut, iron). Goals with an item check finish automatically when the inventory satisfies them. Heartbeat calls are
 capped by `maxHeartbeatsPerHour` (default 120) on top of the per-profile budget.
+
+## Exploration (M13)
+
+- `collect_block` no longer fails when nothing is nearby: it walks to a remembered spot or explores (up to `autoExploreTrips` trips of 160 blocks) and searches again.
+- Each agent keeps a remembered map of resources and landmarks from its background scan, saved in `<world>/aiplayers/maps/<agent uuid>.json`. It is shown to the model as `[KNOWN PLACES]` and in `/ai status`.
+- Autonomous agents are told when the goal needs a block they have never seen, and occasionally (`curiosityPercent`) get a nudge to explore new land.
+- Settings (`[exploration]` in `config/aiplayers-common.toml`): `maxGoToDistance` (0 = unlimited), `maxExploreDistance` (1024), `explorationRadius` from home (0 = unlimited), `autoExplore`, `autoExploreTrips`, `maxCollectRadius` (96), `scanRadius` (32), `keepChunkLoaded`.
+- Performance: block scans are spread over ticks with a fixed budget, and the chunk ticket around a travelling agent is short-lived (it expires on its own about 2 seconds after the agent stops).
+

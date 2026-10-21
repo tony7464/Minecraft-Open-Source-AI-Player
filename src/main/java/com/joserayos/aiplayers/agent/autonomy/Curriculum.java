@@ -34,6 +34,14 @@ public final class Curriculum {
         };
     }
 
+    /** Block a goal needs to find in the world (for collect goals), or null. */
+    public static String neededBlock(Goal g) {
+        String[] call = fallbackCall(g);
+        if (call == null || !call[0].equals("collect_block")) return null;
+        var m = java.util.regex.Pattern.compile("\"block\":\"([a-z_]+)\"").matcher(call[1]);
+        return m.find() ? m.group(1) : null;
+    }
+
     public static Goal next(Map<String, Integer> inv) {
         boolean stonePick = hasAny(inv, "stone_pickaxe", "iron_pickaxe", "diamond_pickaxe", "netherite_pickaxe");
         boolean anyPick = stonePick || hasAny(inv, "wooden_pickaxe");

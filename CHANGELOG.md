@@ -2,6 +2,12 @@
 
 All versions target Minecraft Java 26.1.2 with NeoForge 26.1.2.x and Java 25.
 
+## 0.13.0 (M13) Exploration
+- New `explore` tool (direction or auto, distance, optional `looking_for`) with chunk loading while travelling, water/cliff/stuck detours.
+- New `go_to_known` tool and a persisted per-agent resource/landmark map; shown as `[KNOWN PLACES]` and in `/ai status`.
+- `collect_block` and the autonomous fallback explore instead of failing when nothing is nearby; curiosity exploring.
+- Distance caps are now config with generous defaults (`maxGoToDistance` 0 = unlimited, `explorationRadius` 0 = unlimited, `maxCollectRadius` 96, `scanRadius` 32).
+
 ## 0.12.0 (M12, partial)
 - `/ai debug perf` and a 5-agent performance GameTest; dedicated server start verified.
 - `pickup_items` skips items it can't reach.

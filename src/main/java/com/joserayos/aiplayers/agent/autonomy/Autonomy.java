@@ -61,7 +61,8 @@ public final class Autonomy {
     public String runSuggestedFallback() {
         Goal g = suggestion();
         String[] call = Curriculum.fallbackCall(g);
-        if (call == null) return "no automatic action for goal '" + g.text() + "'";
+        // Goals that need judgment (food, free choice): go look around somewhere new instead of standing still.
+        if (call == null) call = new String[]{"explore", "{\"direction\":\"auto\",\"distance\":128}"};
         if (goal.isNone()) goal = g;
         var result = com.joserayos.aiplayers.brain.tools.ToolRegistry.execute(agent, call[0],
                 new com.joserayos.aiplayers.brain.tools.ToolArgs(com.google.gson.JsonParser.parseString(call[1]).getAsJsonObject()),
@@ -87,13 +88,27 @@ public final class Autonomy {
         return "idle; next heartbeat in " + Math.max(0, (every - idleTicks) / 20) + "s";
     }
 
+    /** Hint when the current/suggested goal needs a block the agent has never seen. */
+    public String explorationHint(Goal g) {
+        String block = Curriculum.neededBlock(g);
+        if (block == null) return "";
+        var m = com.joserayos.aiplayers.skill.gather.BlockMatcher.parse(block).orElse(null);
+        if (m == null) return "";
+        var filter = com.joserayos.aiplayers.skill.gather.KnownSpots.typeFilter(m);
+        boolean seen = agent.getBlockCache().latest().stream().anyMatch(e -> filter.test(e.type()))
+                || com.joserayos.aiplayers.skill.gather.KnownSpots.nearest(agent, m).isPresent();
+        return seen ? "" : " You haven't seen any " + m.label() + " yet: explore (looking_for " + block + ") to find some.";
+    }
+
     /** Prompt section for AUTONOMOUS mode. */
     public String promptText() {
         if (agent.getMode() != AgentMode.AUTONOMOUS) return "";
         Map<String, Integer> inv = inventorySummary();
         return "- You are in AUTONOMOUS mode: pursue your goal on your own with tools. Use set_goal to pick a goal "
                 + "(prefer the suggested one) and complete_goal when done. Owner orders still come first.\n"
-                + "[GOAL] " + goal.describe(inv) + "\n[SUGGESTED NEXT GOAL] " + Curriculum.next(inv).describe(inv) + "\n";
+                + "- Roam freely: explore new land when you need something you haven't seen, or just to discover things.\n"
+                + "[GOAL] " + goal.describe(inv) + "\n[SUGGESTED NEXT GOAL] " + Curriculum.next(inv).describe(inv)
+                + explorationHint(goal.isNone() ? Curriculum.next(inv) : goal) + "\n";
     }
 
     public void tick() {
@@ -119,7 +134,12 @@ public final class Autonomy {
         if (heartbeats.size() >= AiPlayersConfig.get(AiPlayersConfig.AUTONOMOUS_MAX_THINKS_PER_HOUR)) return;
         heartbeats.addLast(now);
         Map<String, Integer> inv = inventorySummary();
+        Goal next = Curriculum.next(inv);
+        String extra = explorationHint(goal.isNone() ? next : goal);
+        if (extra.isEmpty() && agent.getRandom().nextInt(100) < AiPlayersConfig.get(AiPlayersConfig.CURIOSITY_PERCENT)) {
+            extra = " Feeling curious: you could explore (direction auto) to discover new land, then come back to your goal.";
+        }
         agent.getAgentBrain().submitHeartbeat("[heartbeat] You are idle. Goal: " + goal.describe(inv)
-                + ". Suggested next goal: " + Curriculum.next(inv).describe(inv) + ". Decide your next action.");
+                + ". Suggested next goal: " + next.describe(inv) + "." + extra + " Decide your next action.");
     }
 }

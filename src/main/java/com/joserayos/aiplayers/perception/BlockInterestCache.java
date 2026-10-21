@@ -18,7 +18,7 @@ import net.minecraft.world.level.material.Fluids;
  * Refreshed incrementally: a fixed budget of blocks per tick, so it never causes lag.
  */
 public final class BlockInterestCache {
-    public static final int RADIUS = 24;
+    public static final int DEFAULT_RADIUS = 32;
     public static final int VERTICAL = 12;
     public static final int BUDGET_PER_TICK = 2048;
 
@@ -28,24 +28,32 @@ public final class BlockInterestCache {
     private int index;
     private final Map<String, Entry> building = new HashMap<>();
     private volatile List<Entry> latest = List.of();
+    private int radius = DEFAULT_RADIUS;
+    private int cycles;
+
+    /** Completed full scans so far (lets listeners react once per scan). */
+    public int cycles() { return cycles; }
+
+    public BlockPos origin() { return origin; }
 
     public List<Entry> latest() { return latest; }
 
     public void tick(ServerLevel level, BlockPos center) {
-        int side = RADIUS * 2 + 1;
-        int height = VERTICAL * 2 + 1;
-        int total = side * side * height;
         if (index == 0) {
             origin = center.immutable();
             building.clear();
+            radius = com.joserayos.aiplayers.config.AiPlayersConfig.get(com.joserayos.aiplayers.config.AiPlayersConfig.SCAN_RADIUS);
         }
+        int side = radius * 2 + 1;
+        int height = VERTICAL * 2 + 1;
+        int total = side * side * height;
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         int end = Math.min(total, index + BUDGET_PER_TICK);
         for (; index < end; index++) {
             int dy = index % height - VERTICAL;
             int rest = index / height;
-            int dx = rest % side - RADIUS;
-            int dz = rest / side - RADIUS;
+            int dx = rest % side - radius;
+            int dz = rest / side - radius;
             p.set(origin.getX() + dx, origin.getY() + dy, origin.getZ() + dz);
             if (!level.hasChunkAt(p)) continue;
             BlockState s = level.getBlockState(p);
@@ -63,6 +71,7 @@ public final class BlockInterestCache {
             out.sort(Comparator.comparingDouble(Entry::nearestDistance));
             latest = List.copyOf(out);
             index = 0;
+            cycles++;
         }
     }
 

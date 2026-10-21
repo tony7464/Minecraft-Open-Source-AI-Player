@@ -19,17 +19,17 @@ final class GatherTools {
     static void register() {
         ToolRegistry.register(new Tool("collect_block",
                 "Find, walk to and mine blocks until you have `count` of what they drop. Use 'log' for any tree log, "
-                        + "'stone' for cobblestone. Needs the right tool for stone and ores. Fails if none are reachable nearby.",
+                        + "'stone' for cobblestone. Needs the right tool for stone and ores. If none are nearby it walks to a remembered spot or explores to find more.",
                 Schema.object().str("block", "Block id, e.g. oak_log, log, stone, coal_ore, iron_ore", true)
                         .integer("count", "How many drops to collect", 1, 64, true)
-                        .integer("radius", "Search radius (default 32)", 8, 48, false).build(),
+                        .integer("radius", "Search radius (default 32). If nothing is found you automatically explore farther.", 8, 256, false).build(),
                 Tool.Group.GATHER,
                 (agent, args, ctx) -> {
                     if (!AiPlayersConfig.get(AiPlayersConfig.ALLOW_BREAK_BLOCKS)) return ToolResult.error("breaking blocks is disabled on this server");
                     BlockMatcher m = BlockMatcher.parse(args.str("block"))
                             .orElseThrow(() -> new ToolArgs.ToolArgException("unknown block '" + args.str("block") + "'"));
                     if (agent.getMode() == AgentMode.FOLLOW) agent.setMode(AgentMode.STAY);
-                    return ToolRegistry.queue(agent, new CollectBlockTask(m, args.integer("count", 1, 64), args.integer("radius", 8, 48, 32)));
+                    return ToolRegistry.queue(agent, new CollectBlockTask(m, args.integer("count", 1, 64), Math.min(args.integer("radius", 8, 256, 32), com.joserayos.aiplayers.config.AiPlayersConfig.get(com.joserayos.aiplayers.config.AiPlayersConfig.MAX_COLLECT_RADIUS))));
                 }));
 
         ToolRegistry.register(new Tool("equip", "Hold an item from your inventory in your main hand.",

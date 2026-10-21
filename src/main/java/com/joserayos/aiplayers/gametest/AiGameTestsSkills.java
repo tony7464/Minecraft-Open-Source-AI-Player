@@ -34,6 +34,7 @@ final class AiGameTestsSkills {
         M9Tests.registerAll(r);
         M10Tests.registerAll(r);
         M12Tests.registerAll(r);
+        M13Tests.registerAll(r);
     }
 
     static void say(AgentEntity agent, ServerPlayer from, String text) {
@@ -69,9 +70,13 @@ final class AiGameTestsSkills {
         ServerPlayer owner = AiGameTests.owner(helper, 2, 1, 2);
         AgentEntity agent = AiGameTests.agent(helper, owner, "Picker", 4, 1, 4);
         agent.setMode(AgentMode.STAY);
+        // Make sure the drop spot is open floor (an item resting on a block is out of the agent's reach).
+        helper.setBlock(new BlockPos(7, 1, 6), net.minecraft.world.level.block.Blocks.AIR);
+        helper.setBlock(new BlockPos(7, 2, 6), net.minecraft.world.level.block.Blocks.AIR);
         BlockPos drop = helper.absolutePos(new BlockPos(7, 1, 6));
         ItemEntity item = new ItemEntity(helper.getLevel(), drop.getX() + 0.5, drop.getY() + 0.2, drop.getZ() + 0.5,
-                new ItemStack(Items.COBBLESTONE, 4));
+                new ItemStack(Items.COBBLESTONE, 4), 0, 0, 0); // no random toss: it must land on the open floor
+        item.setNoPickUpDelay();
         // Spawn after the batch has finished setting up neighbouring test areas.
         helper.runAfterDelay(5, () -> {
             helper.getLevel().addFreshEntity(item);

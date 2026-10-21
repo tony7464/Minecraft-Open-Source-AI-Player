@@ -47,4 +47,11 @@ class CurriculumTest {
         assertEquals("craft_item", Curriculum.fallbackCall(Curriculum.next(inv("wooden_pickaxe", 1, "cobblestone", 3)))[0]);
         assertEquals(null, Curriculum.fallbackCall(Curriculum.next(inv("stone_pickaxe", 1, "stone_sword", 1))));
     }
+
+    @org.junit.jupiter.api.Test
+    void collectGoalsNameTheBlockToFind() {
+        org.junit.jupiter.api.Assertions.assertEquals("log", Curriculum.neededBlock(new Goal("x", "#logs", 4)));
+        org.junit.jupiter.api.Assertions.assertEquals("iron_ore", Curriculum.neededBlock(new Goal("x", "raw_iron", 3)));
+        org.junit.jupiter.api.Assertions.assertNull(Curriculum.neededBlock(new Goal("x", "stone_pickaxe", 1)));
+    }
 }

@@ -28,7 +28,8 @@ public class CollectBlockTask implements AgentTask {
     public static final int SCAN_BUDGET_PER_TICK = 6000;
     private static final int CLAIM_TICKS = 20 * 30;
 
-    private enum Phase { SCAN, MOVE, BREAK }
+    private enum Phase { SCAN, MOVE, BREAK, TRAVEL }
+    public static final int EXPLORE_STEP = 160;
 
     private final BlockMatcher matcher;
     private final int count;
@@ -47,6 +48,10 @@ public class CollectBlockTask implements AgentTask {
     private float progress;
     private int breakTicks;
     private String result = "";
+    private com.joserayos.aiplayers.task.@Nullable AgentTask travel;
+    private int trips;
+    private int extraTicks;
+    private final java.util.List<String> travelLog = new java.util.ArrayList<>();
 
     public CollectBlockTask(BlockMatcher matcher, int count, int radius) {
         this.matcher = matcher;
@@ -59,11 +64,14 @@ public class CollectBlockTask implements AgentTask {
 
     @Override public String describe() { return "collect_block " + matcher.label() + " x" + count; }
 
-    @Override public String progress() { return collected + "/" + count + " collected"; }
+    @Override
+    public String progress() {
+        return collected + "/" + count + " collected" + (travel != null ? ", searching farther: " + travel.describe() + " " + travel.progress() : "");
+    }
 
     @Override public String resultMessage() { return result; }
 
-    @Override public int timeoutTicks() { return Math.max(3 * 60 * 20, count * 20 * 20); }
+    @Override public int timeoutTicks() { return Math.max(3 * 60 * 20, count * 20 * 20) + extraTicks; }
 
     @Override public @Nullable Vec3 movementGoal() { return phase == Phase.MOVE && target != null ? Vec3.atCenterOf(target) : null; }
 
@@ -75,6 +83,7 @@ public class CollectBlockTask implements AgentTask {
     @Override
     public void stop(AgentEntity agent, String reason) {
         agent.getNavigation().stop();
+        if (travel != null) travel.stop(agent, reason);
         ServerLevel level = (ServerLevel) agent.level();
         if (target != null) {
             level.destroyBlockProgress(agent.getId(), target, -1);
@@ -100,6 +109,7 @@ public class CollectBlockTask implements AgentTask {
             case SCAN -> scan(agent, level);
             case MOVE -> move(agent, level);
             case BREAK -> breakBlock(agent, level);
+            case TRAVEL -> travel(agent);
         };
     }
 
@@ -150,8 +160,10 @@ public class CollectBlockTask implements AgentTask {
             return TaskStatus.RUNNING;
         }
         if (!scannedOnce) return TaskStatus.RUNNING;
+        if (startTravel(agent)) return TaskStatus.RUNNING;
         result = (collected > 0 ? "only found enough for " + collected + "/" + count + "; " : "")
-                + "no reachable " + matcher.label() + " within " + radius + " blocks";
+                + "no reachable " + matcher.label() + " within " + radius + " blocks"
+                + (travelLog.isEmpty() ? "" : " (searched farther: " + String.join("; ", travelLog) + ")");
         return collected > 0 ? TaskStatus.SUCCESS : TaskStatus.FAILED;
     }
 
@@ -237,6 +249,51 @@ public class CollectBlockTask implements AgentTask {
             phase = Phase.SCAN;
             return pickNext(agent, level);
         }
+        return TaskStatus.RUNNING;
+    }
+
+    /** Nothing usable nearby: walk to a remembered spot, or explore toward new land, then scan again. */
+    private boolean startTravel(AgentEntity agent) {
+        if (!com.joserayos.aiplayers.config.AiPlayersConfig.get(com.joserayos.aiplayers.config.AiPlayersConfig.AUTO_EXPLORE)) return false;
+        if (trips >= com.joserayos.aiplayers.config.AiPlayersConfig.get(com.joserayos.aiplayers.config.AiPlayersConfig.AUTO_EXPLORE_TRIPS)) return false;
+        if (agent.isInventoryFull()) return false;
+        trips++;
+        var spot = KnownSpots.nearestElsewhere(agent, matcher, Math.max(16, radius / 2.0));
+        if (spot.isPresent() && spot.get().dist(agent.getX(), agent.getY(), agent.getZ()) > Math.max(16, radius / 2.0)) {
+            var s = spot.get();
+            travel = new com.joserayos.aiplayers.skill.movement.GoToTask(new BlockPos(s.x(), s.y(), s.z()), 3.0);
+        } else {
+            travel = new com.joserayos.aiplayers.skill.movement.ExploreTask("auto", EXPLORE_STEP, matcher);
+        }
+        extraTicks += travel.timeoutTicks() + 600;
+        travel.start(agent);
+        if (travel instanceof com.joserayos.aiplayers.skill.movement.GoToTask) extraTicks += travel.timeoutTicks();
+        phase = Phase.TRAVEL;
+        agent.addEvent("collect_block: no " + matcher.label() + " nearby, " + travel.describe());
+        return true;
+    }
+
+    private TaskStatus travel(AgentEntity agent) {
+        if (travel == null) { beginScan(agent); scannedOnce = false; return TaskStatus.RUNNING; }
+        TaskStatus st = travel.tick(agent);
+        if (st == TaskStatus.RUNNING) return TaskStatus.RUNNING;
+        travel.stop(agent, st.name().toLowerCase(java.util.Locale.ROOT));
+        String msg = travel.resultMessage();
+        if (travel instanceof com.joserayos.aiplayers.skill.movement.ExploreTask ex && ex.found() != null
+                && Math.sqrt(ex.found().distToCenterSqr(agent.position())) > Math.max(4, radius - 4)) {
+            // Spotted one from a distance: walk over before scanning again.
+            travelLog.add(msg.indexOf("; saw:") > 0 ? msg.substring(0, msg.indexOf("; saw:")) : msg);
+            travel = new com.joserayos.aiplayers.skill.movement.GoToTask(ex.found(), 3.0);
+            travel.start(agent);
+            extraTicks += travel.timeoutTicks();
+            return TaskStatus.RUNNING;
+        }
+        int cut = msg.indexOf("; saw:");
+        travelLog.add(cut > 0 ? msg.substring(0, cut) : msg);
+        travel = null;
+        blacklist.clear();
+        beginScan(agent);
+        scannedOnce = false;
         return TaskStatus.RUNNING;
     }
 

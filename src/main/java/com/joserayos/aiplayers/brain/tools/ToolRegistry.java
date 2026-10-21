@@ -27,7 +27,6 @@ import net.minecraft.world.item.Item;
 /** All tools the model can call. Skills from later milestones register here too. */
 public final class ToolRegistry {
     private static final Map<String, Tool> TOOLS = new LinkedHashMap<>();
-    public static final int MAX_GO_TO_DISTANCE = 512;
 
     private ToolRegistry() {}
 
@@ -134,9 +133,48 @@ public final class ToolRegistry {
                     BlockPos target = new BlockPos(args.integer("x", -30_000_000, 30_000_000), args.integer("y", -64, 320),
                             args.integer("z", -30_000_000, 30_000_000));
                     double dist = Math.sqrt(target.distToCenterSqr(agent.position()));
-                    if (dist > MAX_GO_TO_DISTANCE) return ToolResult.error("target is " + Math.round(dist) + " blocks away; max is " + MAX_GO_TO_DISTANCE);
+                    int max = com.joserayos.aiplayers.config.AiPlayersConfig.get(com.joserayos.aiplayers.config.AiPlayersConfig.MAX_GO_TO_DISTANCE);
+                    if (max > 0 && dist > max) return ToolResult.error("target is " + Math.round(dist) + " blocks away; max is " + max + " (server setting maxGoToDistance)");
                     if (agent.getMode().follows()) agent.setMode(AgentMode.STAY);
                     return queue(agent, new GoToTask(target, 1.8));
+                }));
+
+        register(new Tool("explore",
+                "Travel far to discover new land, resources and places. Walks in a compass direction (or 'auto' = toward land you "
+                        + "haven't visited) for `distance` blocks, going around water, cliffs and walls, and reports what it saw. "
+                        + "Give `looking_for` to stop as soon as that block is seen (e.g. iron_ore, log, sand).",
+                Schema.object().str("direction", "north, northeast, east, southeast, south, southwest, west, northwest, or auto (default)", false)
+                        .integer("distance", "Blocks to travel (default 128)", 16, 100_000, false)
+                        .str("looking_for", "Optional block to search for; stops when seen", false).build(), Tool.Group.MOVE,
+                (agent, args, ctx) -> {
+                    String dir = args.str("direction", "auto").strip().toLowerCase(Locale.ROOT);
+                    if (!dir.equals("auto") && com.joserayos.aiplayers.skill.movement.ExploreTask.vector(dir) == null) {
+                        return ToolResult.error("unknown direction '" + dir + "'; use north, east, south, west, northeast... or auto");
+                    }
+                    int max = com.joserayos.aiplayers.config.AiPlayersConfig.get(com.joserayos.aiplayers.config.AiPlayersConfig.MAX_EXPLORE_DISTANCE);
+                    int distance = Math.min(args.integer("distance", 16, 100_000, 128), max);
+                    String want = args.str("looking_for", "").strip();
+                    com.joserayos.aiplayers.skill.gather.BlockMatcher m = null;
+                    if (!want.isEmpty()) {
+                        m = com.joserayos.aiplayers.skill.gather.BlockMatcher.parse(want).orElse(null);
+                        if (m == null) return ToolResult.error("unknown block '" + want + "'");
+                    }
+                    if (agent.getMode().follows()) agent.setMode(AgentMode.STAY);
+                    return queue(agent, new com.joserayos.aiplayers.skill.movement.ExploreTask(dir, distance, m));
+                }));
+
+        register(new Tool("go_to_known",
+                "Walk back to the nearest place where you remember seeing a block (from your map of explored areas), e.g. iron_ore, log, crafting_table, water.",
+                Schema.object().str("block", "Block name", true).build(), Tool.Group.MOVE,
+                (agent, args, ctx) -> {
+                    String want = args.str("block").strip();
+                    var m = com.joserayos.aiplayers.skill.gather.BlockMatcher.parse(want)
+                            .orElseThrow(() -> new ToolArgs.ToolArgException("unknown block '" + want + "'"));
+                    var spot = com.joserayos.aiplayers.skill.gather.KnownSpots.nearest(agent, m);
+                    if (spot.isEmpty()) return ToolResult.error("you don't remember seeing any " + m.label() + "; use explore with looking_for");
+                    var s = spot.get();
+                    if (agent.getMode().follows()) agent.setMode(AgentMode.STAY);
+                    return queue(agent, new GoToTask(new BlockPos(s.x(), s.y(), s.z()), 3.0));
                 }));
 
         register(new Tool("go_to_player", "Walk to a player and stop next to them.",

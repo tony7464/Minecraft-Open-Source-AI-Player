@@ -23,12 +23,20 @@ public class GoToTask implements AgentTask {
 
     @Override public String describe() { return "go_to (" + target.getX() + ", " + target.getY() + ", " + target.getZ() + ")"; }
 
-    @Override public void start(AgentEntity agent) { repathCooldown = 0; }
+    private int timeout = 5 * 60 * 20;
+
+    @Override
+    public void start(AgentEntity agent) {
+        repathCooldown = 0;
+        // Long trips: about 4 blocks/s walking, with generous slack for detours.
+        timeout = Math.max(5 * 60 * 20, (int) Math.min(Integer.MAX_VALUE / 2, agent.position().distanceTo(Vec3.atBottomCenterOf(target)) * 12));
+    }
 
     @Override
     public TaskStatus tick(AgentEntity agent) {
         Vec3 goal = Vec3.atBottomCenterOf(target);
         double dist = agent.position().distanceTo(goal);
+        if (dist > 24) ChunkKeeper.keep(agent);
         if (dist <= range) {
             result = "arrived near (" + target.getX() + ", " + target.getY() + ", " + target.getZ() + ")";
             return TaskStatus.SUCCESS;
@@ -54,5 +62,5 @@ public class GoToTask implements AgentTask {
 
     @Override public Vec3 movementGoal() { return Vec3.atBottomCenterOf(target); }
 
-    @Override public int timeoutTicks() { return 5 * 60 * 20; }
+    @Override public int timeoutTicks() { return timeout; }
 }

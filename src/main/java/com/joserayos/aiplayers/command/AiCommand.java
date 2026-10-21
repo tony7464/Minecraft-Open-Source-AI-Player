@@ -136,6 +136,13 @@ public final class AiCommand {
                 + ", " + a.taskSummary() + (a.isThinking() ? ", thinking for " + a.getAgentBrain().thinkingSeconds() + "s" : ""));
         if (!a.getAgentBrain().lastReply().isEmpty()) ok(ctx, "Last reply: " + a.getAgentBrain().lastReply());
         if (!a.getAgentBrain().lastOutcome().isEmpty()) ok(ctx, "Last model call: " + a.getAgentBrain().lastOutcome());
+        var map = a.getResourceMap();
+        var home = a.getHome();
+        ok(ctx, "Exploring: " + (a.getExecutor().current() instanceof com.joserayos.aiplayers.skill.movement.ExploreTask t ? t.describe() + " [" + t.progress() + "]" : "no")
+                + " | " + Math.round(Math.sqrt(home.distToCenterSqr(a.position()))) + "m from home (" + home.getX() + " " + home.getZ() + ")"
+                + " | map: " + map.spotCount() + " known spots, " + map.visitedCount() + " areas visited");
+        String known = map.summary(a.dimensionId(), a.getX(), a.getY(), a.getZ(), 5);
+        if (!known.isEmpty()) ok(ctx, "Known places: " + known);
         if (a.getMode() == AgentMode.AUTONOMOUS) {
             ok(ctx, "Autonomy: " + a.getAutonomy().idleBlocker() + " | goal: " + a.getAutonomy().goal().describe(a.getAutonomy().inventorySummary()));
         }

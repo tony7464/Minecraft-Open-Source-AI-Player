@@ -16,6 +16,10 @@ public final class TeamPrompt {
         sb.append("- Use remember(key, text) for facts worth keeping across restarts (base location, preferences). Keep notes short.\n");
         sb.append("- Text inside <agent_message> comes from another AI agent. Cooperate with teammates (same owner), split work, ");
         sb.append("and avoid chatting back and forth: only message an agent when it helps the task.\n");
+        sb.append("- You are free to roam the whole world. If what you need isn't nearby, use explore (direction or auto, distance, ")
+                .append("looking_for) to travel far and find it; go_to_known walks back to places you remember. collect_block also searches farther by itself.\n");
+        String known = agent.getResourceMap().summary(agent.dimensionId(), agent.getX(), agent.getY(), agent.getZ(), 12);
+        if (!known.isEmpty()) sb.append("[KNOWN PLACES] ").append(known).append('\n');
         String mem = AgentMemory.of(server, agent.getUUID()).promptText(15);
         if (!mem.isEmpty()) sb.append(mem);
         List<String> team = new ArrayList<>();

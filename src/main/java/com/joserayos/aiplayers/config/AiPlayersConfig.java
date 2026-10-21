@@ -52,6 +52,37 @@ public final class AiPlayersConfig {
             .comment("Cap on heartbeat-triggered model calls per agent per in-game hour of ticks (72000 ticks). Keeps costs bounded.")
             .defineInRange("maxHeartbeatsPerHour", 120, 1, 10000);
 
+    public static final ModConfigSpec.IntValue CURIOSITY_PERCENT = BUILDER
+            .comment("Chance (percent) that an idle autonomous heartbeat suggests exploring somewhere new instead of the curriculum goal.")
+            .defineInRange("curiosityPercent", 15, 0, 100);
+
+    static { BUILDER.pop(); BUILDER.push("exploration"); }
+
+    public static final ModConfigSpec.IntValue MAX_GO_TO_DISTANCE = BUILDER
+            .comment("Maximum distance for one go_to call, in blocks (0 = unlimited).")
+            .defineInRange("maxGoToDistance", 0, 0, 30_000_000);
+    public static final ModConfigSpec.IntValue MAX_EXPLORE_DISTANCE = BUILDER
+            .comment("Maximum distance for one explore call, in blocks.")
+            .defineInRange("maxExploreDistance", 1024, 16, 100_000);
+    public static final ModConfigSpec.IntValue EXPLORATION_RADIUS = BUILDER
+            .comment("Agents never explore farther than this from their home point (0 = unlimited).")
+            .defineInRange("explorationRadius", 0, 0, 30_000_000);
+    public static final ModConfigSpec.BooleanValue AUTO_EXPLORE = BUILDER
+            .comment("collect_block explores (or goes back to a remembered spot) when nothing matching is nearby, instead of failing.")
+            .define("autoExplore", true);
+    public static final ModConfigSpec.IntValue AUTO_EXPLORE_TRIPS = BUILDER
+            .comment("How many explore trips collect_block may make while searching for a block.")
+            .defineInRange("autoExploreTrips", 4, 0, 50);
+    public static final ModConfigSpec.IntValue MAX_COLLECT_RADIUS = BUILDER
+            .comment("Largest search radius collect_block accepts (bigger scans are spread over more ticks).")
+            .defineInRange("maxCollectRadius", 96, 8, 256);
+    public static final ModConfigSpec.IntValue SCAN_RADIUS = BUILDER
+            .comment("Radius of the background scan that feeds the snapshot and the remembered resource map.")
+            .defineInRange("scanRadius", 32, 8, 96);
+    public static final ModConfigSpec.BooleanValue KEEP_CHUNK_LOADED = BUILDER
+            .comment("While an agent travels, keep the chunks around it loaded (a short self-expiring ticket) so it can walk away from players.")
+            .define("keepChunkLoaded", true);
+
     static { BUILDER.pop(); BUILDER.push("brain"); }
 
     public static final ModConfigSpec.IntValue MIN_SECONDS_BETWEEN_THINKS = BUILDER
