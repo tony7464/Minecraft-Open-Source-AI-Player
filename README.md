@@ -136,6 +136,7 @@ See [`docs/TOOLS.md`](docs/TOOLS.md) for the full list and how to test them offl
 | `/ai status <name>` | Health, task, profile |
 | `/ai test-profile <profile>` | Connectivity and tool-calling test |
 | `/ai budget` · `/ai reload` | Costs today · reload config files |
+| `/ai gui` | Open the Agent Manager screen (mode, model, stop, despawn, message) |
 | `/ai memory <name> [clear]` | Show (or wipe) an agent's long-term memory |
 | `/ai locations` | Shared named locations (base, mine...) |
 | `/ai debug snapshot <name>` | Show the world snapshot the model sees |
@@ -160,7 +161,7 @@ you exactly what's missing.
 - [x] **M7** Multi-agent and memory
 - [x] **M8** Building
 - [x] **M9** Autonomous mode
-- [ ] **M10** GUI
+- [x] **M10** GUI
 - [ ] **M11** Voice
 - [ ] **M12** Polish and release
 

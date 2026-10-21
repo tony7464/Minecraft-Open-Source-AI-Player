@@ -16,6 +16,7 @@ public final class AiPlayersClient {
     public AiPlayersClient(IEventBus modBus, ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         modBus.addListener(AiPlayersClient::registerRenderers);
+        modBus.addListener(ClientNetwork::onRegister);
     }
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {

@@ -31,6 +31,15 @@ final class AiCommandExtensions {
         root.then(Commands.literal("model").then(AiCommand.agentArg().then(AiCommand.profileArgument().executes(AiCommandExtensions::model))));
         root.then(Commands.literal("memory").then(AiCommand.agentArg().executes(AiCommandExtensions::memory)
                 .then(Commands.literal("clear").executes(AiCommandExtensions::memoryClear))));
+        root.then(Commands.literal("gui").executes(ctx -> {
+            var player = ctx.getSource().getPlayerOrException();
+            if (!net.neoforged.neoforge.network.registration.NetworkRegistry.hasChannel(player.connection, com.joserayos.aiplayers.network.AgentListPayload.TYPE.id())) {
+                ctx.getSource().sendFailure(Component.literal("The Agent Manager needs the AI Players mod on your client. Use /ai list instead."));
+                return 0;
+            }
+            com.joserayos.aiplayers.network.AiNetwork.sendList(player, true);
+            return 1;
+        }));
         root.then(Commands.literal("locations").executes(AiCommandExtensions::locations));
         root.then(Commands.literal("profiles").executes(AiCommandExtensions::profiles));
         root.then(Commands.literal("reload").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(AiCommandExtensions::reload));

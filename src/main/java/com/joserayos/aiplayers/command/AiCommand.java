@@ -144,7 +144,7 @@ public final class AiCommand {
         String m = StringArgumentType.getString(ctx, "mode");
         AgentMode mode = AgentMode.parse(m).orElse(null);
         if (mode == null) {
-            ctx.getSource().sendFailure(Component.literal("Unknown mode. Use follow, stay, idle or autonomous."));
+            ctx.getSource().sendFailure(Component.literal("Unknown mode. Use follow, stay, idle, guard or autonomous."));
             return 0;
         }
         a.setMode(mode);

@@ -25,6 +25,7 @@ public final class AiPlayersMod {
         modContainer.registerConfig(ModConfig.Type.COMMON, AiPlayersConfig.SPEC);
         ModEntities.register(modEventBus);
         AiGameTests.register(modEventBus);
+        com.joserayos.aiplayers.network.AiNetwork.register(modEventBus);
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent e) -> AiCommand.register(e.getDispatcher()));
         NeoForge.EVENT_BUS.addListener(ServerChatEvent.class, ChatRouter::onServerChat);
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStartedEvent e) ->
