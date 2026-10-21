@@ -129,7 +129,7 @@ See [`docs/TOOLS.md`](docs/TOOLS.md) for the full list and how to test them offl
 | `/ai despawn <name>` | Remove an agent |
 | `/ai list` | List agents |
 | `/ai tell <name> <message>` | Same as `@name` |
-| `/ai mode <name> <follow\|stay\|idle\|guard>` | Change mode |
+| `/ai mode <name> <follow\|stay\|idle\|guard\|autonomous>` | Change mode (autonomous = works toward goals on its own) |
 | `/ai model <name> <profile>` | Hot-swap the model profile |
 | `/ai profiles` | List model profiles from models.json |
 | `/ai stop <name\|all>` | Kill switch: cancel tasks and pending model calls |
@@ -159,7 +159,7 @@ you exactly what's missing.
 - [x] **M6** Survival and combat
 - [x] **M7** Multi-agent and memory
 - [x] **M8** Building
-- [ ] **M9** Autonomous mode
+- [x] **M9** Autonomous mode
 - [ ] **M10** GUI
 - [ ] **M11** Voice
 - [ ] **M12** Polish and release

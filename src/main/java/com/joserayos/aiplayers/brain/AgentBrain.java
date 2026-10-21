@@ -74,6 +74,16 @@ public final class AgentBrain {
         jsonRetryUsed = false;
     }
 
+    /** Autonomous heartbeat: a fresh request with its own chain budget. */
+    public void submitHeartbeat(String input) {
+        if (pending.size() >= 10) return;
+        pending.add(new Input(input, false, ""));
+        chainBudget = AiPlayersConfig.get(AiPlayersConfig.MAX_CHAINED_THINKS);
+        jsonRetryUsed = false;
+    }
+
+    public boolean hasPending() { return !pending.isEmpty(); }
+
     /** Automatic input (task results, follow-ups). Ignored once the chain budget for this request is spent. */
     public boolean submitAutomatic(@Nullable String input) {
         if (chainBudget <= 0 || pending.size() >= 10) return false;
@@ -149,7 +159,7 @@ public final class AgentBrain {
         List<ToolSpec> tools = ToolRegistry.specsFor(agent.getMode());
         AgentSnapshot snapshot = SnapshotBuilder.capture(agent);
         String system = PromptBuilder.systemPrompt(snapshot, agent.getPersona(), true)
-                + com.joserayos.aiplayers.team.TeamPrompt.extra(agent) + (jsonMode ? JsonActionParser.instructions(tools) : "");
+                + com.joserayos.aiplayers.team.TeamPrompt.extra(agent) + agent.getAutonomy().promptText() + (jsonMode ? JsonActionParser.instructions(tools) : "");
         List<ChatMessage> messages = new ArrayList<>();
         messages.add(ChatMessage.system(system));
         messages.addAll(history);

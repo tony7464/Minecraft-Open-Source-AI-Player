@@ -198,6 +198,10 @@ public class BuildTask implements AgentTask {
         Op op = ops.peekFirst();
         if (op == null) {
             result = "built " + blueprint.name() + " (" + placed + " blocks changed)";
+            if ((blueprint.name().equals("hut") || blueprint.name().equals("shelter")) && agent.level().getServer() != null) {
+                com.joserayos.aiplayers.team.AgentMemory.of(agent.level().getServer(), agent.getUUID()).remember("shelter",
+                        blueprint.name() + " at " + origin.getX() + " " + origin.getY() + " " + origin.getZ());
+            }
             return TaskStatus.SUCCESS;
         }
         ServerLevel level = (ServerLevel) agent.level();

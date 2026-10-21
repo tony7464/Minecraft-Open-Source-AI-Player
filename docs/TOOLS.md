@@ -38,6 +38,8 @@ Models without native tool calling can use `"tool_mode": "json_prompt"` in `mode
 | `build_shape` | `shape` (wall/floor/pillar/box), `material`, `width/height/length`, optional `x y z` | Build a simple shape; `material` may be a tag like `#minecraft:planks` or `any_building` | M8 |
 | `build_blueprint` | `name`, optional `x y z` | Build a blueprint (in front of you; `shelter` around you) | M8 |
 | `list_blueprints` | | Available blueprints | M8 |
+| `set_goal` | `goal`, `item?`, `count?` | AUTONOMOUS only: set a goal, optionally verified by inventory | M9 |
+| `complete_goal` | | AUTONOMOUS only: finish the goal (rejected if the inventory check fails) | M9 |
 | `smelt` | `item` (input or output), `count?` | Smelt in a nearby furnace (places one from inventory), picks fuel automatically | M5 |
 
 The perception snapshot also lists `[RESOURCES]` (logs, ores, stone, water, lava within 24 m) and
@@ -63,3 +65,10 @@ in your message into a tool call, for example:
 Every tick, in Java: fight back when hit (never the owner or other agents), defend the owner from mobs targeting them,
 eat when health < 14 (skips rotten flesh etc.), flee hostiles when health < 6, climb out of lava or fire, and slowly
 regenerate when not hurt for 5 s. Damage shows up in `[RECENT EVENTS]`; tasks pause while fighting and resume after.
+
+## Autonomous mode
+
+`/ai mode <name> autonomous`: when idle, the agent gets a `[heartbeat]` every `heartbeatSeconds` (default 15) with its
+goal and a suggested next goal from a built-in curriculum (wood, crafting table, wooden pickaxe, stone pickaxe, sword,
+food, hut, iron). Goals with an item check finish automatically when the inventory satisfies them. Heartbeat calls are
+capped by `maxHeartbeatsPerHour` (default 120) on top of the per-profile budget.

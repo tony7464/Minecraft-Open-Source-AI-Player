@@ -43,6 +43,15 @@ public final class AiPlayersConfig {
             .comment("Agents may attack passive animals (for food).")
             .define("allowAttackPassiveMobs", true);
 
+    static { BUILDER.pop(); BUILDER.push("autonomy"); }
+
+    public static final ModConfigSpec.IntValue AUTONOMOUS_HEARTBEAT_SECONDS = BUILDER
+            .comment("In autonomous mode, an idle agent thinks again after this many seconds.")
+            .defineInRange("heartbeatSeconds", 15, 3, 3600);
+    public static final ModConfigSpec.IntValue AUTONOMOUS_MAX_THINKS_PER_HOUR = BUILDER
+            .comment("Cap on heartbeat-triggered model calls per agent per in-game hour of ticks (72000 ticks). Keeps costs bounded.")
+            .defineInRange("maxHeartbeatsPerHour", 120, 1, 10000);
+
     static { BUILDER.pop(); BUILDER.push("brain"); }
 
     public static final ModConfigSpec.IntValue MIN_SECONDS_BETWEEN_THINKS = BUILDER

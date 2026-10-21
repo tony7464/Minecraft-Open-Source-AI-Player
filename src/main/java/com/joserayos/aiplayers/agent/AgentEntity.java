@@ -77,6 +77,7 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
     private int pickedUpCount;
     private final BlockInterestCache blockCache = new BlockInterestCache();
     private final Reflexes reflexes = new Reflexes(this);
+    private final com.joserayos.aiplayers.agent.autonomy.Autonomy autonomy = new com.joserayos.aiplayers.agent.autonomy.Autonomy(this);
     private @Nullable Vec3 guardPos;
     private int guardRadius = 10;
     private int lastAgentHop;
@@ -310,6 +311,8 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
         addEvent("message from " + from.getAgentName());
     }
 
+    public com.joserayos.aiplayers.agent.autonomy.Autonomy getAutonomy() { return autonomy; }
+
     public Reflexes getReflexes() { return reflexes; }
 
     public boolean isFleeing() { return reflexes.isFleeing(); }
@@ -412,6 +415,7 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
             // Tasks pause while fighting; combat goals own the navigation.
             if (target == null && !reflexes.isFleeing()) executor.tick();
             blockCache.tick(sl, blockPosition());
+            autonomy.tick();
             if (pickupAllowed) collectNearbyItems(sl);
             brain.serverTick();
         }
@@ -455,6 +459,7 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
         output.putString("Profile", profileId);
         output.putString("Persona", persona);
         output.putString("Mode", mode.id());
+        output.putString("Goal", autonomy.goal().serialize());
         writeInventoryToTag(output);
     }
 
@@ -466,6 +471,7 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
         this.profileId = input.getStringOr("Profile", "");
         this.persona = input.getStringOr("Persona", "");
         this.mode = AgentMode.parse(input.getStringOr("Mode", "follow")).orElse(AgentMode.FOLLOW);
+        autonomy.setGoal(com.joserayos.aiplayers.agent.autonomy.Goal.parse(input.getStringOr("Goal", "")));
         readInventoryFromTag(input);
         refreshNameTag();
     }
