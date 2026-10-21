@@ -135,7 +135,7 @@ public final class ToolRegistry {
                             args.integer("z", -30_000_000, 30_000_000));
                     double dist = Math.sqrt(target.distToCenterSqr(agent.position()));
                     if (dist > MAX_GO_TO_DISTANCE) return ToolResult.error("target is " + Math.round(dist) + " blocks away; max is " + MAX_GO_TO_DISTANCE);
-                    agent.setMode(AgentMode.STAY);
+                    if (agent.getMode().follows()) agent.setMode(AgentMode.STAY);
                     return queue(agent, new GoToTask(target, 1.8));
                 }));
 
@@ -143,7 +143,7 @@ public final class ToolRegistry {
                 Schema.object().str("player", "Player name, or 'me'", false).build(), Tool.Group.MOVE,
                 (agent, args, ctx) -> {
                     ServerPlayer p = player(agent, args.str("player", "me"), ctx);
-                    agent.setMode(AgentMode.STAY);
+                    if (agent.getMode().follows()) agent.setMode(AgentMode.STAY);
                     return queue(agent, new GoToEntityTask(p.getUUID(), p.getGameProfile().name(), 3.0));
                 }));
 
@@ -152,7 +152,8 @@ public final class ToolRegistry {
                 (agent, args, ctx) -> {
                     agent.getExecutor().clear("stay");
                     agent.getNavigation().stop();
-                    agent.setMode(AgentMode.STAY);
+                    // Autonomous agents keep their mode; only the owner (/ai mode) takes them out of it.
+                    if (agent.getMode() != AgentMode.AUTONOMOUS) agent.setMode(AgentMode.STAY);
                     return ToolResult.done("staying at " + agent.getBlockX() + ", " + agent.getBlockY() + ", " + agent.getBlockZ());
                 }));
 
