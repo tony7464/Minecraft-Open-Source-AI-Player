@@ -57,7 +57,20 @@ public final class SnapshotBuilder {
                 describeTime(level), level.isThundering() ? "thunder" : level.isRaining() ? "rain" : "clear",
                 ownerInfo, players, agents, threats,
                 agent.inventorySummary(), itemName(agent.getMainHandItem()),
-                agent.hasActiveTask() ? agent.taskSummary().replaceFirst("^task: ", "") : "none", agent.lastResult(), agent.recentEvents());
+                agent.hasActiveTask() ? agent.taskSummary().replaceFirst("^task: ", "") : "none", agent.lastResult(), agent.recentEvents(),
+                resources(agent, false), resources(agent, true));
+    }
+
+    static List<String> resources(AgentEntity agent, boolean structures) {
+        List<String> out = new ArrayList<>();
+        for (BlockInterestCache.Entry e : agent.getBlockCache().latest()) {
+            if (e.structure() != structures) continue;
+            if (out.size() >= 10) break;
+            String where = "(" + e.nearest().getX() + "," + e.nearest().getY() + "," + e.nearest().getZ() + ")";
+            out.add(structures ? e.type() + " at " + where
+                    : e.type() + " x" + e.count() + " (nearest " + Math.round(Math.sqrt(e.nearest().distToCenterSqr(agent.position()))) + "m at " + where + ")");
+        }
+        return out;
     }
 
     public static String itemName(ItemStack stack) {

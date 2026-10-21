@@ -25,7 +25,9 @@ public record AgentSnapshot(
         String heldItem,
         String currentTask,
         String lastResult,
-        List<String> recentEvents) {
+        List<String> recentEvents,
+        List<String> resources,
+        List<String> structures) {
 
     public AgentSnapshot {
         nearbyPlayers = List.copyOf(nearbyPlayers);
@@ -33,6 +35,8 @@ public record AgentSnapshot(
         threats = List.copyOf(threats);
         inventory = List.copyOf(inventory);
         recentEvents = List.copyOf(recentEvents);
+        resources = List.copyOf(resources);
+        structures = List.copyOf(structures);
     }
 
     /** Compact text form for the prompt (small models handle this well). */
@@ -48,6 +52,8 @@ public record AgentSnapshot(
         sb.append("[NEARBY PLAYERS] ").append(nearbyPlayers.isEmpty() ? "none" : String.join(", ", nearbyPlayers)).append('\n');
         sb.append("[NEARBY AGENTS] ").append(nearbyAgents.isEmpty() ? "none" : String.join(", ", nearbyAgents)).append('\n');
         sb.append("[THREATS] ").append(threats.isEmpty() ? "none seen" : String.join(", ", threats)).append('\n');
+        sb.append("[RESOURCES <=24m] ").append(resources.isEmpty() ? "nothing notable seen yet" : String.join(", ", resources)).append('\n');
+        if (!structures.isEmpty()) sb.append("[STRUCTURES] ").append(String.join(", ", structures)).append('\n');
         sb.append("[CURRENT TASK] ").append(currentTask).append(" | LAST RESULT: ").append(lastResult).append('\n');
         if (!recentEvents.isEmpty()) sb.append("[RECENT EVENTS] ").append(String.join("; ", recentEvents)).append('\n');
         return sb.toString();

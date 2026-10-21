@@ -4,5 +4,7 @@ package com.joserayos.aiplayers.brain.tools;
 final class ExtraTools {
     private ExtraTools() {}
 
-    static void registerAll() {}
+    static void registerAll() {
+        GatherTools.register();
+    }
 }

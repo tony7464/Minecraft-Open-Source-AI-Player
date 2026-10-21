@@ -3,6 +3,7 @@ package com.joserayos.aiplayers.agent;
 import com.joserayos.aiplayers.agent.goals.FollowOwnerGoal;
 import com.joserayos.aiplayers.brain.AgentBrain;
 import com.joserayos.aiplayers.config.AiPlayersConfig;
+import com.joserayos.aiplayers.perception.BlockInterestCache;
 import com.joserayos.aiplayers.task.AgentTask;
 import com.joserayos.aiplayers.task.TaskExecutor;
 import com.joserayos.aiplayers.task.TaskStatus;
@@ -69,6 +70,7 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
     private @Nullable UUID followTarget;
     private boolean pickupAllowed;
     private int pickedUpCount;
+    private final BlockInterestCache blockCache = new BlockInterestCache();
 
     public AgentEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -259,6 +261,8 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
         return out;
     }
 
+    public BlockInterestCache getBlockCache() { return blockCache; }
+
     public void setPickupAllowed(boolean allowed) { this.pickupAllowed = allowed; }
 
     public int drainPickedUpCount() {
@@ -319,6 +323,7 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
         super.tick();
         if (level() instanceof ServerLevel sl && isAlive()) {
             executor.tick();
+            blockCache.tick(sl, blockPosition());
             if (pickupAllowed) collectNearbyItems(sl);
             brain.serverTick();
         }

@@ -18,6 +18,17 @@ Models without native tool calling can use `"tool_mode": "json_prompt"` in `mode
 | `give_item` | `player?`, `item`, `count?` | Walk to a player and toss items | M3 |
 | `pickup_items` | `radius?` (1-16) | Pick up dropped items nearby | M3 |
 | `get_status` | | Returns the full perception snapshot | M3 |
+| `collect_block` | `block`, `count` (1-64), `radius?` (8-48) | Find, walk to and mine blocks; picks the best tool, refuses unsafe blocks (lava/falling), skips unreachable ones | M4 |
+| `equip` | `item` | Hold an item in the main hand | M4 |
+| `drop_item` | `item`, `count?` | Toss items on the ground | M4 |
+| `deposit` | `x`,`y`,`z`, `item?`, `count?` | Put items in a chest (all if no item given) | M4 |
+| `withdraw` | `x`,`y`,`z`, `item`, `count` | Take items from a chest | M4 |
+| `inventory_summary` | | List held item and inventory | M4 |
+
+The perception snapshot also lists `[RESOURCES]` (logs, ores, stone, water, lava within 24 m) and
+`[STRUCTURES]` (crafting tables, furnaces, chests, beds) from an incremental, lag-free block scan.
+Server owners can disable block breaking or chest access with `allowBreakBlocks` / `allowContainerAccess`
+in `config/aiplayers-server.toml`.
 
 `player` accepts a player name, `me` (whoever is talking) or `owner`. Item and block names are fuzzy-matched:
 `"oak logs"`, `"Oak_Log"` and `"minecraft:oak_log"` all work.

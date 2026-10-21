@@ -25,6 +25,24 @@ public final class AiPlayersConfig {
             .comment("Agents drop their inventory when they die.")
             .define("dropInventoryOnDeath", true);
 
+    static { BUILDER.pop(); BUILDER.push("safety"); }
+
+    public static final ModConfigSpec.BooleanValue ALLOW_BREAK_BLOCKS = BUILDER
+            .comment("Agents may break blocks (mining, chopping).")
+            .define("allowBreakBlocks", true);
+    public static final ModConfigSpec.BooleanValue ALLOW_PLACE_BLOCKS = BUILDER
+            .comment("Agents may place blocks (building, crafting tables).")
+            .define("allowPlaceBlocks", true);
+    public static final ModConfigSpec.BooleanValue ALLOW_CONTAINER_ACCESS = BUILDER
+            .comment("Agents may put items into and take items out of chests.")
+            .define("allowContainerAccess", true);
+    public static final ModConfigSpec.BooleanValue ALLOW_ATTACK_PLAYERS = BUILDER
+            .comment("Agents may attack players. Off by default.")
+            .define("allowAttackPlayers", false);
+    public static final ModConfigSpec.BooleanValue ALLOW_ATTACK_PASSIVE_MOBS = BUILDER
+            .comment("Agents may attack passive animals (for food).")
+            .define("allowAttackPassiveMobs", true);
+
     static { BUILDER.pop(); BUILDER.push("brain"); }
 
     public static final ModConfigSpec.IntValue MIN_SECONDS_BETWEEN_THINKS = BUILDER

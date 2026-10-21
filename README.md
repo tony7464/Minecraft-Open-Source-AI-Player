@@ -144,7 +144,7 @@ See [`docs/TOOLS.md`](docs/TOOLS.md) for the full list and how to test them offl
 - [x] **M1** MVP: one agent that follows you and chats via a local model
 - [x] **M2** Swappable providers, config profiles and cost controls
 - [x] **M3** Tool calling and first skills
-- [ ] **M4** Mining, gathering and inventory
+- [x] **M4** Mining, gathering and inventory
 - [ ] **M5** Crafting and smelting
 - [ ] **M6** Survival and combat
 - [ ] **M7** Multi-agent and memory
