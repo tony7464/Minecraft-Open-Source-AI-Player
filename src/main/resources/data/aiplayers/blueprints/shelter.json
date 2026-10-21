@@ -1,0 +1,10 @@
+{
+  "name": "shelter",
+  "description": "Emergency 3x3 shelter around a 1x1 space, from any building block (about 21 blocks)",
+  "palette": { "#": "any_building", "_": "air" },
+  "layers": [
+    ["###", "#_#", "###"],
+    ["###", "#_#", "###"],
+    ["###", "###", "###"]
+  ]
+}

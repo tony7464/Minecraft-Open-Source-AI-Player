@@ -1,0 +1,11 @@
+{
+  "name": "hut",
+  "description": "5x5 cobblestone hut with a plank roof and a wooden door (about 46 cobblestone, 25 planks, 1 door)",
+  "palette": { "#": "cobblestone", "P": "#minecraft:planks", "D": "#minecraft:wooden_doors", "_": "air" },
+  "layers": [
+    ["##D##", "#___#", "#___#", "#___#", "#####"],
+    ["##.##", "#___#", "#___#", "#___#", "#####"],
+    ["#####", "#___#", "#___#", "#___#", "#####"],
+    ["PPPPP", "PPPPP", "PPPPP", "PPPPP", "PPPPP"]
+  ]
+}

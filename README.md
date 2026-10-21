@@ -140,6 +140,14 @@ See [`docs/TOOLS.md`](docs/TOOLS.md) for the full list and how to test them offl
 | `/ai locations` | Shared named locations (base, mine...) |
 | `/ai debug snapshot <name>` | Show the world snapshot the model sees |
 
+## Blueprints
+
+Built-in: `hut` (5x5 cobblestone hut, plank roof, wooden door) and `shelter` (emergency 3x3 box around the agent).
+Add your own as JSON files in `config/aiplayers/blueprints/` (format in
+[`Blueprint.java`](src/main/java/com/joserayos/aiplayers/skill/build/Blueprint.java); see
+[`hut.json`](src/main/resources/data/aiplayers/blueprints/hut.json)). Agents check materials before building and tell
+you exactly what's missing.
+
 ## Roadmap
 
 - [x] **M0** Environment and hello mod (NeoForge 26.1.2 MDK, README, license, CI)
@@ -150,7 +158,7 @@ See [`docs/TOOLS.md`](docs/TOOLS.md) for the full list and how to test them offl
 - [x] **M5** Crafting and smelting
 - [x] **M6** Survival and combat
 - [x] **M7** Multi-agent and memory
-- [ ] **M8** Building
+- [x] **M8** Building
 - [ ] **M9** Autonomous mode
 - [ ] **M10** GUI
 - [ ] **M11** Voice

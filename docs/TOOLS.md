@@ -34,6 +34,10 @@ Models without native tool calling can use `"tool_mode": "json_prompt"` in `mode
 | `remember` / `recall` / `forget` | `key`, `text` / `query` / `key` | Long-term notes, saved in `<world>/aiplayers/memory/` | M7 |
 | `set_location` / `go_to_location` | `name`, optional `x y z` / `name` | Named locations shared by all agents, saved in `<world>/aiplayers/team.json` | M7 |
 | `message_agent` | `agent`, `message` | Message another agent (max 3 reply hops, 4 per minute) | M7 |
+| `place_block` | `item`, optional `x y z` | Place one block | M8 |
+| `build_shape` | `shape` (wall/floor/pillar/box), `material`, `width/height/length`, optional `x y z` | Build a simple shape; `material` may be a tag like `#minecraft:planks` or `any_building` | M8 |
+| `build_blueprint` | `name`, optional `x y z` | Build a blueprint (in front of you; `shelter` around you) | M8 |
+| `list_blueprints` | | Available blueprints | M8 |
 | `smelt` | `item` (input or output), `count?` | Smelt in a nearby furnace (places one from inventory), picks fuel automatically | M5 |
 
 The perception snapshot also lists `[RESOURCES]` (logs, ores, stone, water, lava within 24 m) and

@@ -9,5 +9,6 @@ final class ExtraTools {
         CraftTools.register();
         CombatTools.register();
         MemoryTools.register();
+        BuildTools.register();
     }
 }
