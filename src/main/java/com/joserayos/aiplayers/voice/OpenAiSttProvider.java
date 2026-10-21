@@ -18,7 +18,7 @@ public class OpenAiSttProvider implements SttProvider {
 
     public OpenAiSttProvider(VoiceConfig config) {
         this.config = config;
-        this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+        this.http = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(10)).build();
     }
 
     protected URI endpoint() {

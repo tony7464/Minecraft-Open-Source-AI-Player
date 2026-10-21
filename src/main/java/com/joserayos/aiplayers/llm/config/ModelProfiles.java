@@ -96,7 +96,7 @@ public final class ModelProfiles {
         String defaultUrl = switch (provider) {
             case "anthropic" -> "https://api.anthropic.com";
             case "mock" -> "mock://";
-            default -> "http://localhost:11434/v1";
+            default -> "http://127.0.0.1:11434/v1";
         };
         String apiKey = resolveEnv(str(o, "api_key", ""), env, id, warnings);
         String toolMode = str(o, "tool_mode", "native").toLowerCase(Locale.ROOT);
@@ -150,7 +150,7 @@ public final class ModelProfiles {
                   "profiles": {
                     "local-qwen": {
                       "provider": "openai_compat",
-                      "base_url": "http://localhost:11434/v1",
+                      "base_url": "http://127.0.0.1:11434/v1",
                       "model": "qwen3:8b",
                       "api_key": "",
                       "tool_mode": "native",
@@ -163,7 +163,7 @@ public final class ModelProfiles {
                     },
                     "lmstudio": {
                       "provider": "openai_compat",
-                      "base_url": "http://localhost:1234/v1",
+                      "base_url": "http://127.0.0.1:1234/v1",
                       "model": "your-loaded-model-id",
                       "tool_mode": "json_prompt"
                     },

@@ -8,6 +8,7 @@ import java.util.concurrent.Executors;
 /** Shared JDK HTTP client running on virtual threads. */
 public final class HttpSupport {
     public static final HttpClient CLIENT = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1) // Ollama/llama.cpp drop h2c upgrade requests
             .connectTimeout(Duration.ofSeconds(10))
             .executor(Executors.newVirtualThreadPerTaskExecutor())
             .build();
