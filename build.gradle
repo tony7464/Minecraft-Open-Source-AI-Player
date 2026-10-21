@@ -111,6 +111,14 @@ configurations {
 }
 
 dependencies {
+    // Unit tests for the Minecraft-free parts (LLM layer, parsers).
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // Same Gson version Minecraft ships; the llm package only needs Gson + the JDK.
+    testImplementation 'com.google.code.gson:gson:2.13.2'
+    testImplementation 'org.jspecify:jspecify:1.0.0'
+
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
@@ -181,4 +189,8 @@ idea {
         downloadSources = true
         downloadJavadoc = true
     }
+}
+
+tasks.named('test', Test).configure {
+    useJUnitPlatform()
 }

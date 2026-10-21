@@ -1,3 +1,5 @@
+# GitHub Actions CI. To enable it, move this file to .github/workflows/build.yml
+# (it was not pushed there automatically because the push token lacked the "workflow" scope).
 name: Build
 
 on: [push, pull_request]
@@ -21,5 +23,8 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build with Gradle
+      - name: Build and unit tests
         run: ./gradlew build
+
+      - name: GameTests
+        run: ./gradlew runGameTestServer

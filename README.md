@@ -134,7 +134,7 @@ Usage is logged to `logs/aiplayers-usage.csv`; `/ai budget` shows today's totals
 ## Roadmap
 
 - [x] **M0** Environment and hello mod (NeoForge 26.1.2 MDK, README, license, CI)
-- [ ] **M1** MVP: one agent that follows you and chats via a local model
+- [x] **M1** MVP: one agent that follows you and chats via a local model
 - [ ] **M2** Swappable providers, config profiles and cost controls
 - [ ] **M3** Tool calling and first skills
 - [ ] **M4** Mining, gathering and inventory
@@ -146,6 +146,11 @@ Usage is logged to `logs/aiplayers-usage.csv`; `/ai budget` shows today's totals
 - [ ] **M10** GUI
 - [ ] **M11** Voice
 - [ ] **M12** Polish and release
+
+## Continuous integration
+
+A ready-made GitHub Actions workflow lives in [`docs/ci/build.yml`](docs/ci/build.yml). Move it to
+`.github/workflows/build.yml` to enable CI (build, unit tests and GameTests on Java 25).
 
 ## License
 
