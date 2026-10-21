@@ -38,3 +38,9 @@ run/
 **/src/generated/**/.cache/
 repo/
 !**/src/**/repo/
+
+### AI Players ###
+runs/
+*.log
+.env
+config/aiplayers/models.local.json

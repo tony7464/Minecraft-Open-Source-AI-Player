@@ -1,0 +1,15 @@
+---
+description: Project rules for the AI Players mod
+alwaysApply: true
+---
+- Target: Minecraft 26.1.2, NeoForge 26.1.2.x, ModDevGradle, Java 25. Mojang names, unobfuscated.
+- Many APIs changed since 1.21.1: e.g. Identifier (not ResourceLocation), GuiGraphicsExtractor,
+  ChunkPos.containing(...). If unsure, search the Minecraft/NeoForge sources instead of guessing.
+- NEVER touch the world/entities off the server thread. LLM/HTTP code runs on the brain executor and
+  returns results via server.execute(...) or the agent inbox.
+- Package com.joserayos.aiplayers.llm must not import net.minecraft.* or net.neoforged.*.
+- Client-only code lives in .client and must never be referenced from common/server code.
+- Every new skill: implement AgentTask, register a ToolSpec, add a GameTest where feasible.
+- No new dependencies without asking. Use java.net.http + Gson.
+- Never hardcode API keys. Read keys via ${env:NAME} in models.json.
+- Small changes: one feature per request; explain what changed and how to test it.

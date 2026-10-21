@@ -1,25 +1,152 @@
+# Minecraft Open Source AI Player (AI Players mod)
 
-Installation information
-=======
+An open source **NeoForge** mod for **Minecraft Java 26.1.2** that adds multiple AI player agents to your world.
+Agents can play alongside you or on their own, take commands through chat, and run on **swappable LLM backends**:
+local models (Ollama, LM Studio, llama.cpp) or hosted ones (OpenAI, xAI, Gemini, OpenRouter, Anthropic Claude).
 
-This template repository can be directly cloned to get you started with a new
-mod. Simply create a new repository cloned from this one, by following the
-instructions provided by [GitHub](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template).
+The full design is in [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md).
 
-Once you have your clone, simply open the repository in the IDE of your choice. The usual recommendation for an IDE is either IntelliJ IDEA or Eclipse.
+> Status: early development. See the [roadmap](#roadmap) for what works today.
 
-If at any point you are missing libraries in your IDE, or you've run into problems you can
-run `gradlew --refresh-dependencies` to refresh the local cache. `gradlew clean` to reset everything 
-{this does not affect your code} and then start the process again.
+## How it works (short version)
 
-Mapping Names:
-============
-By default, the MDK is configured to use the official mapping names from Mojang for methods and fields 
-in the Minecraft codebase. These names are covered by a specific license. All modders should be aware of this
-license. For the latest license text, refer to the mapping file itself, or the reference copy here:
-https://github.com/NeoForged/NeoForm/blob/main/Mojang.md
+- Each agent is a server-side entity (`AgentEntity`, a `PathfinderMob`) rendered with the player model.
+- The AI model never touches the world directly. It runs on background threads and picks from a fixed set of
+  Java-coded, validated tools (follow, go to, collect blocks, give items, ...).
+- Each agent uses a **model profile** from `config/aiplayers/models.json`, so you can swap models per agent without code changes.
 
-Additional Resources: 
-==========
-Community Documentation: https://docs.neoforged.net/  
-NeoForged Discord: https://discord.neoforged.net/
+## Requirements
+
+| Tool | Version |
+|---|---|
+| JDK | 25 (64-bit) |
+| Minecraft | Java Edition 26.1.2 |
+| NeoForge | 26.1.2.122 or newer 26.1.2.x |
+| Gradle | none to install, the wrapper (`./gradlew`) downloads 9.x |
+
+## Developer setup
+
+```bash
+git clone https://github.com/tony7464/Minecraft-Open-Source-AI-Player.git
+cd Minecraft-Open-Source-AI-Player
+./gradlew build          # first run downloads and decompiles Minecraft (can take a while)
+./gradlew runClient      # start the game with the mod loaded
+./gradlew runServer      # dedicated server (set eula=true in runs/server/eula.txt first)
+./gradlew test           # JUnit tests (LLM layer, parsers)
+./gradlew runGameTestServer  # in-world GameTests
+```
+
+Open the folder in IntelliJ IDEA (with the Minecraft Development plugin) to run and debug.
+The built mod jar ends up in `build/libs/`.
+
+## Ollama quickstart (free, local)
+
+1. Install Ollama from <https://ollama.com>.
+2. Pull a model that supports tool calling:
+   ```bash
+   ollama pull qwen3:8b
+   ```
+3. Check it works:
+   ```bash
+   curl http://localhost:11434/v1/chat/completions -H "Content-Type: application/json" \
+     -d '{"model":"qwen3:8b","messages":[{"role":"user","content":"Say hi in 5 words"}]}'
+   ```
+4. Start the game (`./gradlew runClient`), open a world with cheats on, and run:
+   ```
+   /ai spawn Ava
+   @Ava hi! what time is it and how far away am I?
+   ```
+
+## Configuring models (`models.json`)
+
+On first launch the mod writes `config/aiplayers/models.json` with example profiles.
+Each agent uses one profile; switch in-game with `/ai model <agent> <profile>` and re-read files with `/ai reload`.
+
+```json
+{
+  "default_profile": "local-qwen",
+  "profiles": {
+    "local-qwen": {
+      "provider": "openai_compat",
+      "base_url": "http://localhost:11434/v1",
+      "model": "qwen3:8b",
+      "api_key": "",
+      "tool_mode": "native",
+      "temperature": 0.4,
+      "max_output_tokens": 512,
+      "timeout_seconds": 60
+    },
+    "lmstudio": {
+      "provider": "openai_compat",
+      "base_url": "http://localhost:1234/v1",
+      "model": "your-loaded-model-id",
+      "tool_mode": "json_prompt"
+    },
+    "grok": {
+      "provider": "openai_compat",
+      "base_url": "https://api.x.ai/v1",
+      "model": "<model id from xAI docs>",
+      "api_key": "${env:XAI_API_KEY}",
+      "daily_budget_usd": 1.00
+    },
+    "claude": {
+      "provider": "anthropic",
+      "base_url": "https://api.anthropic.com",
+      "model": "<model id from Anthropic docs>",
+      "api_key": "${env:ANTHROPIC_API_KEY}",
+      "daily_budget_usd": 1.00
+    },
+    "mock": { "provider": "mock" }
+  }
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `provider` | `openai_compat` (Ollama, LM Studio, llama.cpp, OpenAI, xAI, OpenRouter, Gemini OpenAI endpoint), `anthropic`, or `mock` |
+| `base_url` | API base URL |
+| `model` | Model id as the provider names it |
+| `api_key` | Use `${env:NAME}` to read it from an environment variable. **Never put a real key in a committed file.** |
+| `tool_mode` | `native` (provider tool calling) or `json_prompt` (fallback for models without tool calling) |
+| `temperature`, `max_output_tokens`, `timeout_seconds` | Request settings |
+| `requests_per_minute` | Rate limit per profile (default 20) |
+| `daily_budget_usd`, `price_per_million_input`, `price_per_million_output` | Cost guard for hosted models |
+
+Usage is logged to `logs/aiplayers-usage.csv`; `/ai budget` shows today's totals.
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `@Ava <message>` / `@all <message>` | Talk to one agent or all of your agents |
+| `/ai spawn <name> [profile]` | Spawn an agent you own |
+| `/ai despawn <name>` | Remove an agent |
+| `/ai list` | List agents |
+| `/ai tell <name> <message>` | Same as `@name` |
+| `/ai mode <name> <follow\|idle\|stay>` | Change mode |
+| `/ai model <name> <profile>` | Hot-swap the model profile |
+| `/ai stop <name\|all>` | Kill switch: cancel tasks and pending model calls |
+| `/ai status <name>` | Health, task, profile |
+| `/ai test-profile <profile>` | Connectivity and tool-calling test |
+| `/ai budget` · `/ai reload` | Costs today · reload config files |
+| `/ai debug snapshot <name>` | Show the world snapshot the model sees |
+
+## Roadmap
+
+- [x] **M0** Environment and hello mod (NeoForge 26.1.2 MDK, README, license, CI)
+- [ ] **M1** MVP: one agent that follows you and chats via a local model
+- [ ] **M2** Swappable providers, config profiles and cost controls
+- [ ] **M3** Tool calling and first skills
+- [ ] **M4** Mining, gathering and inventory
+- [ ] **M5** Crafting and smelting
+- [ ] **M6** Survival and combat
+- [ ] **M7** Multi-agent and memory
+- [ ] **M8** Building
+- [ ] **M9** Autonomous mode
+- [ ] **M10** GUI
+- [ ] **M11** Voice
+- [ ] **M12** Polish and release
+
+## License
+
+[MIT](LICENSE) © 2026 Jose Rayos
