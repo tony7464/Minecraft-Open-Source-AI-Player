@@ -402,8 +402,21 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
 
     // ---- lifecycle ----
 
+    /** Server-wide tick cost of all agents (for /ai debug perf and the performance GameTest). */
+    public static final java.util.concurrent.atomic.LongAdder TICK_NANOS = new java.util.concurrent.atomic.LongAdder();
+    public static final java.util.concurrent.atomic.LongAdder TICK_COUNT = new java.util.concurrent.atomic.LongAdder();
+
     @Override
     public void tick() {
+        long start = System.nanoTime();
+        tickInner();
+        if (!level().isClientSide()) {
+            TICK_NANOS.add(System.nanoTime() - start);
+            TICK_COUNT.increment();
+        }
+    }
+
+    private void tickInner() {
         super.tick();
         if (level() instanceof ServerLevel sl && isAlive()) {
             reflexes.tick(sl);

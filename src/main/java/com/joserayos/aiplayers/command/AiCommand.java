@@ -54,7 +54,14 @@ public final class AiCommand {
                 .then(agentArg().executes(AiCommand::stop)));
         root.then(Commands.literal("debug").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(Commands.literal("snapshot").then(agentArg().executes(AiCommand::debugSnapshot)))
-                .then(Commands.literal("prompt").then(agentArg().executes(AiCommand::debugPrompt))));
+                .then(Commands.literal("prompt").then(agentArg().executes(AiCommand::debugPrompt)))
+                .then(Commands.literal("perf").executes(ctx -> {
+                    long n = AgentEntity.TICK_COUNT.sumThenReset();
+                    long ns = AgentEntity.TICK_NANOS.sumThenReset();
+                    ok(ctx, n == 0 ? "No agent ticks measured yet." : String.format(java.util.Locale.ROOT,
+                            "Agents: %d tick(s) since last check, avg %.1f µs per agent tick (resets counters).", n, ns / 1000.0 / n));
+                    return (int) Math.min(Integer.MAX_VALUE, n);
+                })));
 
         AiCommandExtensions.extend(root);
         dispatcher.register(root);

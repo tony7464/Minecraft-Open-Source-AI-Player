@@ -178,6 +178,11 @@ you exactly what's missing.
 - [x] **M10** GUI
 - [x] **M11** Voice
 - [ ] **M12** Polish and release
+  - [x] Performance check: 5 busy agents average ~0.15 ms per agent tick (`perf_five_agents` GameTest, `/ai debug perf`)
+  - [x] Dedicated-server start check, CHANGELOG, Modrinth listing draft ([docs/MODRINTH.md](docs/MODRINTH.md))
+  - [ ] Publish on Modrinth/CurseForge (needs the owner's accounts)
+  - [ ] Custom A* pathfinder with pillaring/bridging (only if vanilla navigation proves too limited)
+  - [ ] Text-to-speech replies; real-model evaluation of the milestone "done when" scenarios
 
 ## Continuous integration
 

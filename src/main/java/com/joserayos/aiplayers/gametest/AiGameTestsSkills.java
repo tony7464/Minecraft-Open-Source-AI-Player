@@ -33,6 +33,7 @@ final class AiGameTestsSkills {
         M8Tests.registerAll(r);
         M9Tests.registerAll(r);
         M10Tests.registerAll(r);
+        M12Tests.registerAll(r);
     }
 
     static void say(AgentEntity agent, ServerPlayer from, String text) {
@@ -68,10 +69,10 @@ final class AiGameTestsSkills {
         ServerPlayer owner = AiGameTests.owner(helper, 2, 1, 2);
         AgentEntity agent = AiGameTests.agent(helper, owner, "Picker", 4, 1, 4);
         agent.setMode(AgentMode.STAY);
-        BlockPos drop = helper.absolutePos(new BlockPos(10, 1, 9));
+        BlockPos drop = helper.absolutePos(new BlockPos(8, 1, 7));
         helper.getLevel().addFreshEntity(new ItemEntity(helper.getLevel(), drop.getX() + 0.5, drop.getY() + 0.2, drop.getZ() + 0.5,
                 new ItemStack(Items.COBBLESTONE, 4)));
-        say(agent, owner, "!pickup_items {\"radius\":12}");
+        say(agent, owner, "!pickup_items {\"radius\":8}");
         helper.succeedWhen(() -> helper.assertTrue(agent.countItem(Items.COBBLESTONE) == 4,
                 "has " + agent.countItem(Items.COBBLESTONE) + " cobblestone; " + agent.lastResult()));
     }
