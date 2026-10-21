@@ -4,6 +4,11 @@ import com.joserayos.aiplayers.agent.goals.FollowOwnerGoal;
 import com.joserayos.aiplayers.brain.AgentBrain;
 import com.joserayos.aiplayers.config.AiPlayersConfig;
 import com.joserayos.aiplayers.perception.BlockInterestCache;
+import com.joserayos.aiplayers.skill.combat.Combat;
+import com.joserayos.aiplayers.skill.combat.DefendGoal;
+import com.joserayos.aiplayers.skill.combat.Reflexes;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 import com.joserayos.aiplayers.task.AgentTask;
 import com.joserayos.aiplayers.task.TaskExecutor;
 import com.joserayos.aiplayers.task.TaskStatus;
@@ -71,6 +76,9 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
     private boolean pickupAllowed;
     private int pickedUpCount;
     private final BlockInterestCache blockCache = new BlockInterestCache();
+    private final Reflexes reflexes = new Reflexes(this);
+    private @Nullable Vec3 guardPos;
+    private int guardRadius = 10;
 
     public AgentEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -92,9 +100,18 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
+        this.goalSelector.addGoal(3, new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(this, 1.2, true));
         this.goalSelector.addGoal(5, new FollowOwnerGoal(this, 1.0, 6.0F, 3.0F));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
+        this.targetSelector.addGoal(1, new net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal(this) {
+            @Override
+            public boolean canUse() {
+                LivingEntity attacker = AgentEntity.this.getLastHurtByMob();
+                return attacker != null && Combat.mayAttack(AgentEntity.this, attacker) && super.canUse();
+            }
+        });
+        this.targetSelector.addGoal(2, new DefendGoal(this));
     }
 
     @Override
@@ -138,7 +155,8 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
 
     public void setMode(AgentMode mode) {
         this.mode = mode;
-        if (mode != AgentMode.FOLLOW) this.getNavigation().stop();
+        if (!mode.follows()) this.getNavigation().stop();
+        if (mode != AgentMode.GUARD) this.guardPos = null;
     }
 
     public AgentBrain getAgentBrain() { return brain; }
@@ -261,6 +279,38 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
         return out;
     }
 
+    public Reflexes getReflexes() { return reflexes; }
+
+    public boolean isFleeing() { return reflexes.isFleeing(); }
+
+    public int getGuardRadius() { return guardRadius; }
+
+    /** Guard a player (follow + protect) or a fixed position. */
+    public void startGuard(@Nullable ServerPlayer player, @Nullable Vec3 pos, int radius) {
+        this.guardRadius = radius;
+        setMode(AgentMode.GUARD);
+        this.guardPos = pos;
+        if (player != null) setFollowTarget(player.getUUID());
+    }
+
+    /** What GUARD mode protects: the fixed spot, else the followed player, else the agent itself. */
+    public Vec3 guardCenter() {
+        if (guardPos != null) return guardPos;
+        ServerPlayer p = getFollowTargetPlayer();
+        return p != null && p.level() == level() ? p.position() : position();
+    }
+
+    @Override
+    public boolean hurtServer(ServerLevel level, DamageSource source, float damage) {
+        boolean hurt = super.hurtServer(level, source, damage);
+        if (hurt && damage > 0) {
+            reflexes.onHurt();
+            String from = source.getEntity() != null ? source.getEntity().getName().getString() : source.getMsgId();
+            addEvent("took " + Math.round(damage) + " damage from " + from + " (health " + Math.round(getHealth()) + "/" + Math.round(getMaxHealth()) + ")");
+        }
+        return hurt;
+    }
+
     public BlockInterestCache getBlockCache() { return blockCache; }
 
     public void setPickupAllowed(boolean allowed) { this.pickupAllowed = allowed; }
@@ -322,7 +372,14 @@ public class AgentEntity extends PathfinderMob implements InventoryCarrier {
     public void tick() {
         super.tick();
         if (level() instanceof ServerLevel sl && isAlive()) {
-            executor.tick();
+            reflexes.tick(sl);
+            LivingEntity target = getTarget();
+            if (target != null && (!target.isAlive() || target.distanceToSqr(this) > 48 * 48)) {
+                setTarget(null);
+                target = null;
+            }
+            // Tasks pause while fighting; combat goals own the navigation.
+            if (target == null && !reflexes.isFleeing()) executor.tick();
             blockCache.tick(sl, blockPosition());
             if (pickupAllowed) collectNearbyItems(sl);
             brain.serverTick();

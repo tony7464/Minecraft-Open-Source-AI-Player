@@ -26,6 +26,11 @@ Models without native tool calling can use `"tool_mode": "json_prompt"` in `mode
 | `inventory_summary` | | List held item and inventory | M4 |
 | `craft_item` | `item`, `count?` | Craft from inventory; auto-crafts planks/sticks etc. and places a crafting table when needed | M5 |
 | `list_craftable` | | Items craftable right now | M5 |
+| `attack` | `target` (mob type or name) | Fight the nearest matching mob until it dies (never the owner; players only if allowed) | M6 |
+| `guard` | `player?` (`me`, name, or `here`), `radius?` (4-24) | GUARD mode: follow and protect, fight hostiles in range | M6 |
+| `stop_attacking` | | Stop fighting, leave GUARD mode | M6 |
+| `equip_best_armor` | | Wear best armor, hold best weapon | M6 |
+| `eat` | | Eat the best safe food to heal | M6 |
 | `smelt` | `item` (input or output), `count?` | Smelt in a nearby furnace (places one from inventory), picks fuel automatically | M5 |
 
 The perception snapshot also lists `[RESOURCES]` (logs, ores, stone, water, lava within 24 m) and
@@ -45,3 +50,9 @@ in your message into a tool call, for example:
 @Ava !go_to {"x": 100, "y": 64, "z": -20}
 @Ava !give_item {"item": "oak_log", "count": 3}
 ```
+
+## Reflexes (no model call)
+
+Every tick, in Java: fight back when hit (never the owner or other agents), defend the owner from mobs targeting them,
+eat when health < 14 (skips rotten flesh etc.), flee hostiles when health < 6, climb out of lava or fire, and slowly
+regenerate when not hurt for 5 s. Damage shows up in `[RECENT EVENTS]`; tasks pause while fighting and resume after.

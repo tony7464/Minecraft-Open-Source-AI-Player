@@ -31,7 +31,7 @@ public class FollowOwnerGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (agent.getMode() != AgentMode.FOLLOW || agent.hasActiveTask()) return false;
+        if (!agent.getMode().follows() || agent.hasActiveTask()) return false;
         ServerPlayer o = agent.getFollowTargetPlayer();
         if (o == null || o.isSpectator() || o.level() != agent.level()) return false;
         if (agent.distanceToSqr(o) < startDistance * startDistance) return false;
@@ -41,7 +41,7 @@ public class FollowOwnerGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        if (owner == null || agent.getMode() != AgentMode.FOLLOW || agent.hasActiveTask()) return false;
+        if (owner == null || !agent.getMode().follows() || agent.hasActiveTask()) return false;
         if (owner.isRemoved() || owner.level() != agent.level()) return false;
         return agent.distanceToSqr(owner) > stopDistance * stopDistance;
     }

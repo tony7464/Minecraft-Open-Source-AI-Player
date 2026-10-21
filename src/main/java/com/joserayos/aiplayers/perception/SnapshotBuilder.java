@@ -56,7 +56,7 @@ public final class SnapshotBuilder {
                 level.dimension().identifier().getPath(), biome,
                 describeTime(level), level.isThundering() ? "thunder" : level.isRaining() ? "rain" : "clear",
                 ownerInfo, players, agents, threats,
-                agent.inventorySummary(), itemName(agent.getMainHandItem()),
+                agent.inventorySummary(), held(agent),
                 agent.hasActiveTask() ? agent.taskSummary().replaceFirst("^task: ", "") : "none", agent.lastResult(), agent.recentEvents(),
                 resources(agent, false), resources(agent, true));
     }
@@ -71,6 +71,19 @@ public final class SnapshotBuilder {
                     : e.type() + " x" + e.count() + " (nearest " + Math.round(Math.sqrt(e.nearest().distToCenterSqr(agent.position()))) + "m at " + where + ")");
         }
         return out;
+    }
+
+    static String held(AgentEntity agent) {
+        StringBuilder sb = new StringBuilder(itemName(agent.getMainHandItem()));
+        List<String> armor = new ArrayList<>();
+        for (var slot : new net.minecraft.world.entity.EquipmentSlot[]{net.minecraft.world.entity.EquipmentSlot.HEAD,
+                net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET}) {
+            var s = agent.getItemBySlot(slot);
+            if (!s.isEmpty()) armor.add(itemName(s));
+        }
+        sb.append(" | ARMOR ").append(armor.isEmpty() ? "none" : String.join(", ", armor)).append(" (").append(agent.getArmorValue()).append(")");
+        if (agent.getTarget() != null) sb.append(" | FIGHTING ").append(agent.getTarget().getName().getString());
+        return sb.toString();
     }
 
     public static String itemName(ItemStack stack) {
