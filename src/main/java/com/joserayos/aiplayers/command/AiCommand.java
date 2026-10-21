@@ -134,7 +134,7 @@ public final class AiCommand {
     private static int tell(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         AgentEntity a = agent(ctx);
         String msg = StringArgumentType.getString(ctx, "message");
-        a.getAgentBrain().submit(PromptBuilder.chatInput(ctx.getSource().getTextName(), msg));
+        a.getAgentBrain().submitFromPlayer(PromptBuilder.chatInput(ctx.getSource().getTextName(), msg), ctx.getSource().getTextName());
         ok(ctx, "Sent to " + a.getAgentName() + ".");
         return 1;
     }

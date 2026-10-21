@@ -32,7 +32,7 @@ public class FollowOwnerGoal extends Goal {
     @Override
     public boolean canUse() {
         if (agent.getMode() != AgentMode.FOLLOW || agent.hasActiveTask()) return false;
-        ServerPlayer o = agent.getOwnerPlayer();
+        ServerPlayer o = agent.getFollowTargetPlayer();
         if (o == null || o.isSpectator() || o.level() != agent.level()) return false;
         if (agent.distanceToSqr(o) < startDistance * startDistance) return false;
         owner = o;

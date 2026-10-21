@@ -44,6 +44,6 @@ public final class ChatRouter {
             player.sendSystemMessage(Component.literal(agent.getAgentName() + " only takes orders from its owner.").withStyle(ChatFormatting.GRAY));
             return;
         }
-        agent.getAgentBrain().submit(PromptBuilder.chatInput(player.getGameProfile().name(), message));
+        agent.getAgentBrain().submitFromPlayer(PromptBuilder.chatInput(player.getGameProfile().name(), message), player.getGameProfile().name());
     }
 }

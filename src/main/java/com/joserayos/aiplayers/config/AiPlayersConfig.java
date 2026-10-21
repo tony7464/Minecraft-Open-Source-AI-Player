@@ -21,6 +21,10 @@ public final class AiPlayersConfig {
             .comment("Operators (permission level 2) can command agents they don't own.")
             .define("opsCanCommandAnyAgent", true);
 
+    public static final ModConfigSpec.BooleanValue DROP_INVENTORY_ON_DEATH = BUILDER
+            .comment("Agents drop their inventory when they die.")
+            .define("dropInventoryOnDeath", true);
+
     static { BUILDER.pop(); BUILDER.push("brain"); }
 
     public static final ModConfigSpec.IntValue MIN_SECONDS_BETWEEN_THINKS = BUILDER
@@ -35,6 +39,10 @@ public final class AiPlayersConfig {
     public static final ModConfigSpec.IntValue MAX_TOOL_CALLS_PER_THINK = BUILDER
             .comment("Maximum tool calls accepted from one model response.")
             .defineInRange("maxToolCallsPerThink", 4, 1, 16);
+
+    public static final ModConfigSpec.IntValue MAX_CHAINED_THINKS = BUILDER
+            .comment("Maximum automatic follow-up model calls (after tool or task results) per message from a player.")
+            .defineInRange("maxChainedThinks", 4, 0, 20);
 
     static { BUILDER.pop(); }
 

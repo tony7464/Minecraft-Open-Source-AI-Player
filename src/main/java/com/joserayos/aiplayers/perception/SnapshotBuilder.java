@@ -56,8 +56,8 @@ public final class SnapshotBuilder {
                 level.dimension().identifier().getPath(), biome,
                 describeTime(level), level.isThundering() ? "thunder" : level.isRaining() ? "rain" : "clear",
                 ownerInfo, players, agents, threats,
-                List.of(), itemName(agent.getMainHandItem()),
-                agent.hasActiveTask() ? "busy" : "none", "none", List.of());
+                agent.inventorySummary(), itemName(agent.getMainHandItem()),
+                agent.hasActiveTask() ? agent.taskSummary().replaceFirst("^task: ", "") : "none", agent.lastResult(), agent.recentEvents());
     }
 
     public static String itemName(ItemStack stack) {

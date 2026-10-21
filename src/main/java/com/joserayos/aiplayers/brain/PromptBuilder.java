@@ -19,6 +19,8 @@ public final class PromptBuilder {
         if (toolsAvailable) {
             sb.append("- To act in the world, call tools. Only use the tools provided; you cannot run commands.\n");
             sb.append("- Use the reply text for what you say out loud in chat.\n");
+            sb.append("- Tasks (walking, giving items...) take time. When one finishes you get a [task_result] message; then decide what to do next.\n");
+            sb.append("- If a tool returns ERROR, fix the arguments or tell your owner what went wrong. Don't repeat the same failing call.\n");
         } else {
             sb.append("- You can only talk for now; you cannot act in the world yet. Be honest about that if asked to do things.\n");
         }

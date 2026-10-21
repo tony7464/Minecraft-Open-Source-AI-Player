@@ -3,7 +3,23 @@ package com.joserayos.aiplayers.agent;
 import com.joserayos.aiplayers.agent.goals.FollowOwnerGoal;
 import com.joserayos.aiplayers.brain.AgentBrain;
 import com.joserayos.aiplayers.config.AiPlayersConfig;
+import com.joserayos.aiplayers.task.AgentTask;
+import com.joserayos.aiplayers.task.TaskExecutor;
+import com.joserayos.aiplayers.task.TaskStatus;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.npc.InventoryCarrier;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -36,7 +52,7 @@ import org.jspecify.annotations.Nullable;
  * The body of an AI agent: a server-side PathfinderMob rendered with the player model.
  * All world interaction happens on the server thread; the {@link AgentBrain} only talks to models off-thread.
  */
-public class AgentEntity extends PathfinderMob {
+public class AgentEntity extends PathfinderMob implements InventoryCarrier {
     private static final EntityDataAccessor<Boolean> DATA_THINKING =
             SynchedEntityData.defineId(AgentEntity.class, EntityDataSerializers.BOOLEAN);
 
@@ -46,6 +62,13 @@ public class AgentEntity extends PathfinderMob {
     private String persona = "";
     private AgentMode mode = AgentMode.FOLLOW;
     private final AgentBrain brain = new AgentBrain(this);
+    private final SimpleContainer inventory = new SimpleContainer(36);
+    private final TaskExecutor executor = new TaskExecutor(this, this::onTaskFinished);
+    private final Deque<String> recentEvents = new ArrayDeque<>();
+    private String lastResult = "none";
+    private @Nullable UUID followTarget;
+    private boolean pickupAllowed;
+    private int pickedUpCount;
 
     public AgentEntity(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -127,16 +150,136 @@ public class AgentEntity extends PathfinderMob {
         }
     }
 
-    /** Whether a skill task is currently running (task framework arrives in M3). */
-    public boolean hasActiveTask() { return false; }
+    /** Whether a skill task is currently running or queued. */
+    public boolean hasActiveTask() { return !executor.isIdle(); }
+
+    public TaskExecutor getExecutor() { return executor; }
 
     /** Short description of what the agent is doing, for /ai list and /ai status. */
-    public String taskSummary() { return "task: none"; }
+    public String taskSummary() { return executor.summary(); }
 
     /** Kill switch: cancel the pending model call, tasks and movement. */
     public void stopEverything(String reason) {
         brain.cancel(reason);
+        executor.clear(reason);
         getNavigation().stop();
+    }
+
+    private void onTaskFinished(AgentTask task, TaskStatus status, String message) {
+        lastResult = task.id() + " " + status.name() + ": " + message;
+        addEvent(lastResult);
+        brain.onTaskResult(task, status, message);
+    }
+
+    // ---- events (for perception) ----
+
+    public void addEvent(String event) {
+        long t = level().getGameTime();
+        recentEvents.addLast("[t" + t / 20 + "s] " + event);
+        while (recentEvents.size() > 10) recentEvents.removeFirst();
+    }
+
+    public List<String> recentEvents() {
+        long now = level().getGameTime() / 20;
+        List<String> out = new ArrayList<>();
+        for (String e : recentEvents) {
+            int close = e.indexOf("s] ");
+            long at = Long.parseLong(e.substring(2, close));
+            out.add(e.substring(close + 3) + " (" + (now - at) + "s ago)");
+        }
+        return out;
+    }
+
+    public String lastResult() { return lastResult; }
+
+    // ---- following ----
+
+    /** Who FOLLOW mode follows: a chosen player, or the owner by default. */
+    public @Nullable ServerPlayer getFollowTargetPlayer() {
+        if (followTarget != null && level() instanceof ServerLevel sl) {
+            ServerPlayer p = sl.getServer().getPlayerList().getPlayer(followTarget);
+            if (p != null) return p;
+        }
+        return getOwnerPlayer();
+    }
+
+    public void setFollowTarget(@Nullable UUID target) { this.followTarget = target; }
+
+    // ---- inventory ----
+
+    @Override
+    public SimpleContainer getInventory() { return inventory; }
+
+    public int countItem(Item item) {
+        int n = 0;
+        for (ItemStack s : inventory.getItems()) if (s.is(item)) n += s.getCount();
+        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND}) {
+            ItemStack s = getItemBySlot(slot);
+            if (s.is(item)) n += s.getCount();
+        }
+        return n;
+    }
+
+    /** Remove up to {@code count} of an item (inventory first, then hands). */
+    public ItemStack removeItems(Item item, int count) {
+        ItemStack removed = inventory.removeItemType(item, count);
+        int missing = count - removed.getCount();
+        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND}) {
+            if (missing <= 0) break;
+            ItemStack held = getItemBySlot(slot);
+            if (held.is(item)) {
+                int take = Math.min(missing, held.getCount());
+                if (removed.isEmpty()) removed = held.copyWithCount(0);
+                held.shrink(take);
+                removed.grow(take);
+                missing -= take;
+            }
+        }
+        return removed;
+    }
+
+    /** Add to inventory; returns what didn't fit. */
+    public ItemStack addItem(ItemStack stack) { return inventory.addItem(stack); }
+
+    public boolean canHold(ItemStack stack) { return inventory.canAddItem(stack); }
+
+    public boolean isInventoryFull() {
+        for (ItemStack s : inventory.getItems()) if (s.isEmpty()) return false;
+        return true;
+    }
+
+    /** Inventory grouped by item, e.g. ["oak_log x6", "bread x3"]. */
+    public List<String> inventorySummary() {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (ItemStack s : inventory.getItems()) {
+            if (!s.isEmpty()) counts.merge(BuiltInRegistries.ITEM.getKey(s.getItem()).getPath(), s.getCount(), Integer::sum);
+        }
+        List<String> out = new ArrayList<>();
+        counts.forEach((k, v) -> out.add(k + " x" + v));
+        return out;
+    }
+
+    public void setPickupAllowed(boolean allowed) { this.pickupAllowed = allowed; }
+
+    public int drainPickedUpCount() {
+        int n = pickedUpCount;
+        pickedUpCount = 0;
+        return n;
+    }
+
+    private void collectNearbyItems(ServerLevel level) {
+        for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, getBoundingBox().inflate(1.0, 0.5, 1.0))) {
+            if (item.isRemoved() || item.getItem().isEmpty() || item.hasPickUpDelay()) continue;
+            ItemStack stack = item.getItem();
+            if (!inventory.canAddItem(stack)) continue;
+            int before = stack.getCount();
+            ItemStack rest = inventory.addItem(stack.copy());
+            int taken = before - rest.getCount();
+            if (taken <= 0) continue;
+            take(item, taken);
+            pickedUpCount += taken;
+            if (rest.isEmpty()) item.discard(); else item.setItem(rest);
+        }
     }
 
     private void refreshNameTag() {
@@ -174,7 +317,9 @@ public class AgentEntity extends PathfinderMob {
     @Override
     public void tick() {
         super.tick();
-        if (level() instanceof ServerLevel) {
+        if (level() instanceof ServerLevel sl && isAlive()) {
+            executor.tick();
+            if (pickupAllowed) collectNearbyItems(sl);
             brain.serverTick();
         }
     }
@@ -188,8 +333,17 @@ public class AgentEntity extends PathfinderMob {
             AgentChat.announce(sl.getServer(), Component.literal(agentName + " died: ")
                     .append(source.getLocalizedDeathMessage(this)).withStyle(ChatFormatting.GRAY));
             brain.cancel("died");
+            executor.clear("died");
         }
         super.die(source);
+    }
+
+    @Override
+    protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean killedByPlayer) {
+        super.dropCustomDeathLoot(level, source, killedByPlayer);
+        if (AiPlayersConfig.get(AiPlayersConfig.DROP_INVENTORY_ON_DEATH)) {
+            for (ItemStack s : inventory.removeAllItems()) spawnAtLocation(level, s);
+        }
     }
 
     @Override
@@ -208,6 +362,7 @@ public class AgentEntity extends PathfinderMob {
         output.putString("Profile", profileId);
         output.putString("Persona", persona);
         output.putString("Mode", mode.id());
+        writeInventoryToTag(output);
     }
 
     @Override
@@ -218,6 +373,7 @@ public class AgentEntity extends PathfinderMob {
         this.profileId = input.getStringOr("Profile", "");
         this.persona = input.getStringOr("Persona", "");
         this.mode = AgentMode.parse(input.getStringOr("Mode", "follow")).orElse(AgentMode.FOLLOW);
+        readInventoryFromTag(input);
         refreshNameTag();
     }
 

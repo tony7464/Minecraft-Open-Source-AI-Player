@@ -115,6 +115,11 @@ Each agent uses one profile; switch in-game with `/ai model <agent> <profile>` a
 
 Usage is logged to `logs/aiplayers-usage.csv`; `/ai budget` shows today's totals.
 
+## Tools
+
+Agents act through validated Java tools such as `follow_player`, `go_to`, `give_item` and `pickup_items`.
+See [`docs/TOOLS.md`](docs/TOOLS.md) for the full list and how to test them offline with the `mock` profile.
+
 ## Commands
 
 | Command | What it does |
@@ -138,7 +143,7 @@ Usage is logged to `logs/aiplayers-usage.csv`; `/ai budget` shows today's totals
 - [x] **M0** Environment and hello mod (NeoForge 26.1.2 MDK, README, license, CI)
 - [x] **M1** MVP: one agent that follows you and chats via a local model
 - [x] **M2** Swappable providers, config profiles and cost controls
-- [ ] **M3** Tool calling and first skills
+- [x] **M3** Tool calling and first skills
 - [ ] **M4** Mining, gathering and inventory
 - [ ] **M5** Crafting and smelting
 - [ ] **M6** Survival and combat
