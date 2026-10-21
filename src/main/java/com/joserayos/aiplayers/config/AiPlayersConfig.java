@@ -36,21 +36,6 @@ public final class AiPlayersConfig {
             .comment("Maximum tool calls accepted from one model response.")
             .defineInRange("maxToolCallsPerThink", 4, 1, 16);
 
-    static { BUILDER.pop(); BUILDER.push("model"); }
-
-    public static final ModConfigSpec.ConfigValue<String> BASE_URL = BUILDER
-            .comment("OpenAI-compatible base URL. Ollama: http://localhost:11434/v1, LM Studio: http://localhost:1234/v1")
-            .define("baseUrl", "http://localhost:11434/v1");
-    public static final ModConfigSpec.ConfigValue<String> MODEL = BUILDER
-            .comment("Model id, e.g. qwen3:8b for Ollama.")
-            .define("model", "qwen3:8b");
-    public static final ModConfigSpec.ConfigValue<String> API_KEY_ENV = BUILDER
-            .comment("Name of the environment variable holding the API key (leave empty for local servers).")
-            .define("apiKeyEnv", "");
-    public static final ModConfigSpec.IntValue TIMEOUT_SECONDS = BUILDER
-            .comment("Request timeout in seconds.")
-            .defineInRange("timeoutSeconds", 60, 5, 600);
-
     static { BUILDER.pop(); }
 
     public static final ModConfigSpec SPEC = BUILDER.build();
@@ -60,10 +45,6 @@ public final class AiPlayersConfig {
     /** Safe read that falls back to the default before the config is loaded (e.g. in unit tests). */
     public static int get(ModConfigSpec.IntValue value) {
         try { return value.getAsInt(); } catch (IllegalStateException e) { return value.getDefault(); }
-    }
-
-    public static String get(ModConfigSpec.ConfigValue<String> value) {
-        try { return value.get(); } catch (IllegalStateException e) { return value.getDefault(); }
     }
 
     public static boolean get(ModConfigSpec.BooleanValue value) {

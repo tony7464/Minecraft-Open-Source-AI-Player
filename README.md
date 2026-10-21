@@ -110,7 +110,8 @@ Each agent uses one profile; switch in-game with `/ai model <agent> <profile>` a
 | `tool_mode` | `native` (provider tool calling) or `json_prompt` (fallback for models without tool calling) |
 | `temperature`, `max_output_tokens`, `timeout_seconds` | Request settings |
 | `requests_per_minute` | Rate limit per profile (default 20) |
-| `daily_budget_usd`, `price_per_million_input`, `price_per_million_output` | Cost guard for hosted models |
+| `daily_budget_usd`, `price_per_million_input`, `price_per_million_output` | Cost guard for hosted models. Set the prices from your provider's pricing page, otherwise cost is estimated as $0 and the budget never triggers |
+| `fallback_profile` | Profile to switch to when the daily budget is used up (otherwise the agent pauses) |
 
 Usage is logged to `logs/aiplayers-usage.csv`; `/ai budget` shows today's totals.
 
@@ -125,6 +126,7 @@ Usage is logged to `logs/aiplayers-usage.csv`; `/ai budget` shows today's totals
 | `/ai tell <name> <message>` | Same as `@name` |
 | `/ai mode <name> <follow\|idle\|stay>` | Change mode |
 | `/ai model <name> <profile>` | Hot-swap the model profile |
+| `/ai profiles` | List model profiles from models.json |
 | `/ai stop <name\|all>` | Kill switch: cancel tasks and pending model calls |
 | `/ai status <name>` | Health, task, profile |
 | `/ai test-profile <profile>` | Connectivity and tool-calling test |
@@ -135,7 +137,7 @@ Usage is logged to `logs/aiplayers-usage.csv`; `/ai budget` shows today's totals
 
 - [x] **M0** Environment and hello mod (NeoForge 26.1.2 MDK, README, license, CI)
 - [x] **M1** MVP: one agent that follows you and chats via a local model
-- [ ] **M2** Swappable providers, config profiles and cost controls
+- [x] **M2** Swappable providers, config profiles and cost controls
 - [ ] **M3** Tool calling and first skills
 - [ ] **M4** Mining, gathering and inventory
 - [ ] **M5** Crafting and smelting

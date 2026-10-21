@@ -6,12 +6,11 @@ import com.joserayos.aiplayers.agent.AgentEntity;
 import com.joserayos.aiplayers.config.AiPlayersConfig;
 import com.joserayos.aiplayers.llm.ChatMessage;
 import com.joserayos.aiplayers.llm.LlmException;
-import com.joserayos.aiplayers.llm.LlmRequest;
+import com.joserayos.aiplayers.llm.LlmRouter;
+import com.joserayos.aiplayers.llm.config.ModelProfile;
 import com.joserayos.aiplayers.llm.LlmResponse;
-import com.joserayos.aiplayers.llm.providers.OpenAiCompatibleProvider;
 import com.joserayos.aiplayers.perception.AgentSnapshot;
 import com.joserayos.aiplayers.perception.SnapshotBuilder;
-import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -87,19 +86,27 @@ public final class AgentBrain {
 
         AgentSnapshot snapshot = SnapshotBuilder.capture(agent);
         List<ChatMessage> messages = PromptBuilder.build(snapshot, agent.getPersona(), false, List.copyOf(history), input);
-        int timeout = AiPlayersConfig.get(AiPlayersConfig.TIMEOUT_SECONDS);
-        LlmRequest request = new LlmRequest(AiPlayersConfig.get(AiPlayersConfig.MODEL), messages, List.of(), 0.4, 512, Duration.ofSeconds(timeout));
-        String keyEnv = AiPlayersConfig.get(AiPlayersConfig.API_KEY_ENV);
-        String apiKey = keyEnv.isBlank() ? "" : System.getenv().getOrDefault(keyEnv, "");
-        OpenAiCompatibleProvider provider = new OpenAiCompatibleProvider(AiPlayersConfig.get(AiPlayersConfig.BASE_URL), apiKey);
+        LlmRouter router = AiServices.router();
+        ModelProfile profile;
+        try {
+            profile = router.select(agent.getProfileId());
+        } catch (LlmException e) {
+            reportError(e);
+            return;
+        }
+        int timeout = profile.timeoutSeconds() * LlmRouter.MAX_ATTEMPTS + 10;
+        noticeHostedProvider(profile);
 
         int gen = ++generation;
         agent.setThinking(true);
         ServerPlayer owner = agent.getOwnerPlayer();
         if (owner != null) owner.sendSystemMessage(Component.literal(agent.getAgentName() + " is thinking...").withStyle(ChatFormatting.GRAY), true);
 
-        CompletableFuture<LlmResponse> future = BrainExecutor.submit(() -> provider.chat(request))
-                .orTimeout(timeout + 5L, TimeUnit.SECONDS);
+        String agentName = agent.getAgentName();
+        String profileId = agent.getProfileId();
+        CompletableFuture<LlmResponse> future = BrainExecutor.submit(() -> router.chat(agentName, profileId, messages, List.of()))
+                .thenApply(LlmRouter.Result::response)
+                .orTimeout(timeout, TimeUnit.SECONDS);
         inFlight = future;
         lastExchange = describe(messages, null);
         future.whenComplete((response, error) -> server.execute(() -> onResult(gen, input, response, error)));
@@ -111,12 +118,7 @@ public final class AgentBrain {
         agent.setThinking(false);
         nextThinkAtMillis = System.currentTimeMillis() + AiPlayersConfig.get(AiPlayersConfig.MIN_SECONDS_BETWEEN_THINKS) * 1000L;
         if (error != null || response == null) {
-            LlmException e = LlmException.from(error);
-            AiPlayersMod.LOGGER.warn("Agent {} model call failed: {}", agent.getAgentName(), e.getMessage());
-            ServerPlayer owner = agent.getOwnerPlayer();
-            if (owner != null) {
-                owner.sendSystemMessage(Component.literal("[" + agent.getAgentName() + "] " + e.friendlyMessage()).withStyle(ChatFormatting.RED));
-            }
+            reportError(LlmException.from(error));
             return;
         }
         lastExchange = describe(List.of(), response) + "\n" + lastExchange;
@@ -125,6 +127,24 @@ public final class AgentBrain {
         remember(ChatMessage.user(input));
         remember(ChatMessage.assistant(reply));
         AgentChat.say(agent, reply);
+    }
+
+    private void reportError(LlmException e) {
+        AiPlayersMod.LOGGER.warn("Agent {} model call failed: {}", agent.getAgentName(), e.getMessage());
+        ServerPlayer owner = agent.getOwnerPlayer();
+        if (owner != null) {
+            owner.sendSystemMessage(Component.literal("[" + agent.getAgentName() + "] " + e.friendlyMessage()).withStyle(ChatFormatting.RED));
+        }
+    }
+
+    private void noticeHostedProvider(ModelProfile profile) {
+        ServerPlayer owner = agent.getOwnerPlayer();
+        if (owner == null || !profile.isHosted()) return;
+        if (AiServices.firstUse(owner.getUUID() + "/" + profile.id())) {
+            owner.sendSystemMessage(Component.literal("[AI Players] Chat sent to " + agent.getAgentName()
+                    + " and nearby game state are sent to " + profile.baseUrl() + " (profile '" + profile.id() + "').")
+                    .withStyle(ChatFormatting.YELLOW));
+        }
     }
 
     static String describe(List<ChatMessage> messages, @Nullable LlmResponse response) {

@@ -44,6 +44,7 @@ public final class AiGameTests {
 
     static {
         test("agent_follows_owner", "platform", 400, AiGameTests::agentFollowsOwner);
+        test("agent_replies_with_mock_model", "platform", 200, AiGameTests::agentRepliesWithMockModel);
         AiGameTestsSkills.registerAll(AiGameTests::test);
     }
 
@@ -85,6 +86,15 @@ public final class AiGameTests {
     }
 
     // ---- tests ----
+
+    private static void agentRepliesWithMockModel(GameTestHelper helper) {
+        ServerPlayer owner = owner(helper, 3, 1, 3);
+        AgentEntity agent = agent(helper, owner, "Chatty", 5, 1, 5);
+        agent.setMode(AgentMode.STAY);
+        agent.getAgentBrain().submit("<chat from=\"tester\">hello there</chat>");
+        helper.succeedWhen(() -> helper.assertTrue(agent.getAgentBrain().lastReply().startsWith("Mock reply to: hello there"),
+                "no reply yet: '" + agent.getAgentBrain().lastReply() + "'"));
+    }
 
     private static void agentFollowsOwner(GameTestHelper helper) {
         ServerPlayer owner = owner(helper, 3, 1, 3);
